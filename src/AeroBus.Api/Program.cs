@@ -1,3 +1,4 @@
+using AeroBus.Api.Bootstrap;
 using AeroBus.Core.Common.Cache;
 using AeroBus.Core.Data;
 using AeroBus.Core.Events;
@@ -60,7 +61,26 @@ builder.Services.AddRulesAuthoring();
 // domain services depend on IEventPublisher to emit at their change sites.
 builder.Services.AddEvents(builder.Configuration);
 
+// OpenAPI/Swagger: one "v1" doc over every endpoint group, Bearer security so
+// the "Authorize" button drives both JWT and ab_ keys. UI is gated below.
+builder.Services.AddAeroBusSwagger();
+
 var app = builder.Build();
+
+// OpenAPI document + Swagger UI. The generated document is always available;
+// the interactive UI is Development-only so we don't expose it in production.
+// (A prod deployment that wants the UI can flip SWAGGER_UI=true.)
+var enableSwaggerUi = app.Environment.IsDevelopment() ||
+    string.Equals(builder.Configuration["SWAGGER_UI"], "true", StringComparison.OrdinalIgnoreCase);
+if (enableSwaggerUi)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "AeroBus API v1");
+        options.DocumentTitle = "AeroBus API";
+    });
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

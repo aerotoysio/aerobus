@@ -81,6 +81,13 @@ namespace AeroBus.Core.Services.Distribution
                 var maxStops = Math.Max(0, request.SearchCriteria.MaxConnections ?? 1);
                 var maxPerOd = request.SearchCriteria.MaxResultsPerOD > 0 ? request.SearchCriteria.MaxResultsPerOD : 20;
 
+                // The cabin the search is priced/booked in — taken from the first
+                // cabin preference (e.g. "Y"). It flows onto each solution so a
+                // later order-create decrements the matching per-compartment seat
+                // inventory bucket; null falls back to the single "ALL" bucket.
+                var requestedCabin = request.SearchCriteria.CabinPreferences?
+                    .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+
                 foreach (var odReq in odRequests)
                 {
                     var origin = odReq.Origin ?? string.Empty;
@@ -102,6 +109,11 @@ namespace AeroBus.Core.Services.Distribution
                     foreach (var solution in solutions)
                     {
                         solution.Id = solution.Id == Guid.Empty ? Guid.NewGuid() : solution.Id;
+
+                        // Stamp the requested cabin so order-create binds to the
+                        // right inventory bucket (the search engine doesn't set it).
+                        if (string.IsNullOrWhiteSpace(solution.Cabin) && requestedCabin is not null)
+                            solution.Cabin = requestedCabin;
 
                         var built = await _shopBundleBuilder.BuildAsync(
                             companyId, passengers, solution, origin, destination, currency, debug, ct);

@@ -33,6 +33,7 @@ namespace AeroBus.Api.Bootstrap
                 var claims = user.FindAll("perm").Select(r => r.Value);
                 return new { name, email, roles, claims };
             })
+            .WithTags("Diagnostics")
             .RequireAuthorization("users:view");
 
             // Admin (control plane) — route shapes identical to the ooms

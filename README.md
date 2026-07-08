@@ -1,53 +1,182 @@
 # AeroBus
 
 **The backbone of the open airline retailing stack** — one API and event bus that
-carries offers, orders, and configuration between the channels (AeroDesk, AeroWeb,
-AeroMesh) and the open foundation ([DocumentForge](https://github.com/aerotoysio/documentforge)
-for storage, [RuleForge](https://github.com/aerotoysio/ruleforge) for dynamic rules).
+carries offers, orders, and configuration between the distribution channels
+(AeroDesk, AeroWeb, AeroMesh) and the open foundation:
+[DocumentForge](https://github.com/aerotoysio/documentforge) for storage and
+[RuleForge](https://github.com/aerotoysio/ruleforge) for dynamic rules.
 
 ```
-AeroDesk / AeroWeb / AeroMesh
-            │
-            ▼
-        ┌────────┐      HTTP       ┌───────────┐
-        │ AeroBus ├────────────────▶ RuleForge │
-        └───┬────┘   decisions     └─────┬─────┘
-            │ HTTP                       │
-            ▼                            ▼
-        ┌──────────────────────────────────┐
-        │           DocumentForge          │
-        └──────────────────────────────────┘
+        AeroDesk / AeroWeb / AeroMesh
+                    │  HTTP + webhooks/SSE
+                    ▼
+                ┌─────────┐   HTTP (decisions)   ┌───────────┐
+                │ AeroBus ├──────────────────────▶  RuleForge │
+                └────┬────┘   X-AERO-Key         └─────┬─────┘
+                     │ HTTP (Bearer)                   │  (rules read from DF)
+                     ▼                                 ▼
+              ┌────────────────────────────────────────────┐
+              │                DocumentForge                │
+              │   (the only datastore — every write here)   │
+              └────────────────────────────────────────────┘
 ```
 
-One service, one API surface: schedules & flight building, product/bundle
-catalogue, offer shopping, order management, control plane (companies, users,
-roles, API tokens), rule filing, and a pub/sub event backbone.
+AeroBus is **one service, one API surface**. It owns no database of its own:
+everything it persists goes through DocumentForge, and every pricing/eligibility
+call goes to RuleForge (which itself reads its rules from DocumentForge). That
+keeps AeroBus a thin, stateless backbone — scale it out, and the store and the
+rules engine are the shared state.
 
-## Run it
+## What's inside
+
+| Concern | What it does |
+| --- | --- |
+| **Control plane** | Companies, users, roles, permissions, workspaces, company configs, API tokens. |
+| **Catalogue** | Reference data (continents → countries → regions → airports), market zones, fleet (equipment + seat layouts), schedules and the **flight builder** (materialises flights + per-flight seat inventory). |
+| **Products** | Products, bundles (LITE / FLEX / FLEXPLUS), stock keeping. |
+| **Customer** | The customer aggregate (passports + stored cards embedded). |
+| **Offer** | `POST /offer/shop` builds priced solutions for an O&D; RuleForge decides the bundles and pricing. Degrades gracefully when RuleForge is down. |
+| **Order** | Create (atomic seat-inventory decrement) / retrieve / change (cancel releases inventory). |
+| **Rules** | File and publish rules + reference sets into RuleForge's DocumentForge collections, bind them to an environment, and refresh the engine. |
+| **Events** | A transactional outbox with a background dispatcher: signed webhooks, an SSE stream, and a queryable audit trail. |
+
+## Quickstart
+
+### Docker Compose (full stack)
+
+Brings up DocumentForge + RuleForge + AeroBus together:
 
 ```bash
+cp .env.example .env          # set DFDB_API_KEY + RULEFORGE_API_KEY (dev defaults are fine locally)
 docker compose up -d
-curl http://localhost:5080/health
+
+curl http://localhost:5080/health                 # AeroBus
+curl http://localhost:5080/health/documentforge   # AeroBus → DocumentForge probe
+curl http://localhost:5055/health                  # RuleForge (open)
 ```
 
-Or locally against a dev DocumentForge:
+`.env` documents the two secrets:
+
+- **`DFDB_API_KEY`** — DocumentForge Bearer key, shared by DocumentForge,
+  RuleForge (`RULEFORGE_DF_API_KEY`) and AeroBus (`DocumentForge__ApiKey`).
+- **`RULEFORGE_API_KEY`** — the `X-AERO-Key` shared secret between AeroBus and
+  RuleForge.
+
+### Local (from source)
+
+Run the three services locally with the helper script (starts dfdb + RuleForge
+`--no-launch-profile` in `df` mode + AeroBus, and publishes the shop rule to the
+`dev` environment **before** RuleForge boots so the decision endpoint binds):
+
+```powershell
+./scripts/run-stack.ps1      # dfdb :4300, RuleForge :5050, AeroBus :5080
+./scripts/smoke.ps1          # end-to-end smoke test against the running stack
+```
+
+Or by hand:
 
 ```bash
+# 1. DocumentForge
 dfdb serve --port 4300 --data-dir ./data --insecure-dev-mode
-dotnet run --project src/AeroBus.Api
+
+# 2. RuleForge (df source, dev env) — see scripts/run-stack.ps1 for the full env
+dotnet run --project <ruleforge>/src/RuleForge.Api --no-launch-profile
+
+# 3. AeroBus
+dotnet run --project src/AeroBus.Api          # http://localhost:5080
 ```
 
-## Tests
+In Development, interactive API docs are at **http://localhost:5080/swagger**
+(one "AeroBus API v1" document over every group; the **Authorize** button takes
+either a user JWT or an `ab_` API key).
 
-Live round-trip tests against a local DocumentForge:
+## Endpoint map
+
+Every group is mounted in
+[`AppEndpoints.cs`](src/AeroBus.Api/Bootstrap/AppEndpoints.cs). Route shapes match
+the ooms admin/order services so existing UIs can repoint here (see
+[`docs/ui-client.md`](docs/ui-client.md)).
+
+| Group | Routes | Auth |
+| --- | --- | --- |
+| Diagnostics | `GET /health`, `GET /health/documentforge`, `GET /version` | open |
+| Admin | `/admin/companies`, `/admin/companies/config`, `/admin/roles`, `/admin/roles/permissions`, `/admin/permissions`, `/admin/users`, `/admin/workspaces`, `/admin/api-tokens` | Bearer (login is `POST /admin/users/{companySlug}/authenticate`, anonymous) |
+| Catalogue | `/catalogue/{continents,countries,regions,airports,market-zones,equipment,layouts,schedules,flights,connection-rules,flight-builder,bundles,products,stockkeeper}` | Bearer |
+| Customer | `/customer` | Bearer |
+| Offer | `/offer/shop`, `/offer/price` | Bearer |
+| Order | `/order/create`, `/order/retrieve`, `/order/change` | Bearer |
+| Rules | `/rules/*`, `/rules/reference-sets/*`, `/rules/environments/*` | Bearer |
+| Events | `/events`, `/events/stream`, `/events/subscriptions` | Bearer |
+
+Two credentials work everywhere `[Authorize]` applies: a **user JWT** (from the
+authenticate endpoint) or an **`ab_` API key** (from `/admin/api-tokens`). The
+`Authorization: Bearer <token>` scheme routes on the token prefix.
+
+## Event catalog
+
+Events are written to the `outboxevents` outbox the instant the domain writes its
+change, dispatched at-least-once, and delivered to webhooks (`X-AeroBus-Signature`,
+HMAC-SHA256 over the exact body) + the SSE stream. Type filters support exact
+(`order.created`) or trailing-glob (`order.*`) patterns.
+
+| Type | Emitted when |
+| --- | --- |
+| `order.created` | An order is created (after inventory decrement). |
+| `order.changed` | A non-cancel order transition. |
+| `order.cancelled` | An order is cancelled (inventory released). |
+| `inventory.adjusted` | Seat inventory decremented/restored (carries `delta` + `reason`). |
+| `offer.created` | An offer shop persists a solution set. |
+| `customer.created` | A customer aggregate is created. |
+| `flight.built` | The flight builder materialises a flight. |
+| `flight.cancelled` | A built flight is cancelled. |
+| `schedule.changed` | A schedule is created/edited. |
+| `product.changed` | A product is saved. |
+| `bundle.changed` | A bundle is saved. |
+| `rule.published` | A rule is published to an environment (global, no company scope). |
+
+Consume them three ways: **webhooks** (`POST /events/subscriptions` with a
+`types[]` filter + optional `secret`), the **SSE stream**
+(`GET /events/stream?from={seq}`), or the **audit query** (`GET /events?from={seq}`).
+
+## Decision points (RuleForge)
+
+AeroBus calls RuleForge at named decision points (configured under `RuleForge:Endpoints`).
+Shop **degrades** if RuleForge is unavailable (empty bundles + a warning, never a
+500); the order points **allow** by default (fail-open) unless configured otherwise.
+
+| Decision point | RuleForge endpoint | Failure mode |
+| --- | --- | --- |
+| Shop bundles | `POST /v1/offer/shop-bundles` | Degrade |
+| Offer pricing | `POST /v1/offer/price` | Degrade |
+| Order validate | `POST /v1/order/validate` | Allow |
+| Order change eligibility | `POST /v1/order/change-eligibility` | Allow |
+| Refund eligibility | `POST /v1/order/refund-eligibility` | Allow |
+
+File the rules with `scripts/seed-shop-rule.ps1` (or `run-stack.ps1`, which does it
+for you): it PUTs the reference sets + `rule-shop-bundles` from [`rules/`](rules/)
+and publishes them to the `dev` environment.
+
+## Run the tests
+
+Live round-trip tests against a local DocumentForge (36 tests):
 
 ```bash
-dfdb serve --port 4300 --data-dir ./test-data --insecure-dev-mode
+# start DocumentForge on :4300
+dotnet run --project <documentforge>/src/DocumentForge.Cli -- \
+  serve --port 4300 --insecure-dev-mode --data-dir ./test-data
+
 dotnet test
 ```
 
-Point them elsewhere with `DOCUMENTFORGE_BASEURL` / `DOCUMENTFORGE_APIKEY`.
+Point them elsewhere with `DOCUMENTFORGE_BASEURL` / `DOCUMENTFORGE_APIKEY`. Each
+test uses a fresh company id and cleans up what it creates, so runs are isolated
+and repeatable.
 
-## Status
+For a full-stack, every-module exercise (control plane → catalogue → flight
+build → offer → order → oversell → events), run **`scripts/run-stack.ps1`** then
+**`scripts/smoke.ps1`** — a single PASS/FAIL smoke test that drives a live stack.
 
-In active build. Current phase: skeleton + DocumentForge data layer.
+## Related repositories
+
+- [DocumentForge](https://github.com/aerotoysio/documentforge) — the document store AeroBus persists everything through.
+- [RuleForge](https://github.com/aerotoysio/ruleforge) — the runtime rules engine AeroBus calls at its decision points.
