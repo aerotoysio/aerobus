@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using AeroBus.Api.Endpoints.Admin;
 using AeroBus.Api.Endpoints.Diagnostics;
 using AeroBus.Core.Common;
 
@@ -14,6 +17,28 @@ namespace AeroBus.Api.Bootstrap
         {
             app.MapGroup("/health").WithTags("Health").HealthMapping();
             app.MapVersion();
+
+            // Who-am-I probe: echoes the authenticated principal's claims.
+            app.MapGet("/secure/me", (ClaimsPrincipal user) =>
+            {
+                var name = user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.Name) ?? "unknown";
+                var email = user.FindFirstValue(JwtRegisteredClaimNames.Email);
+                var roles = user.FindAll(ClaimTypes.Role).Select(r => r.Value);
+                var claims = user.FindAll("perm").Select(r => r.Value);
+                return new { name, email, roles, claims };
+            })
+            .RequireAuthorization("users:view");
+
+            // Admin (control plane) — route shapes identical to the ooms
+            // admin-service so the existing admin UI can repoint later.
+            app.MapGroup("/admin/companies").WithTags("Admin").AdminCompaniesMapping();
+            app.MapGroup("/admin/companies/config").WithTags("Admin").AdminCompanyConfigMapping();
+            app.MapGroup("/admin/roles").WithTags("Admin").AdminRolesMapping();
+            app.MapGroup("/admin/roles/permissions").WithTags("Admin").AdminRolePermissionsMapping();
+            app.MapGroup("/admin/permissions").WithTags("Admin").AdminPermissionsMapping();
+            app.MapGroup("/admin/users").WithTags("Admin").AdminUsersMapping();
+            app.MapGroup("/admin/workspaces").WithTags("Admin").AdminWorkspacesMapping();
+            app.MapGroup("/admin/api-tokens").WithTags("Admin").AdminApiTokensMapping();
 
             return app;
         }
