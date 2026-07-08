@@ -1,3 +1,4 @@
+using AeroBus.Core.Events;
 using AeroBus.Core.Model.Distribution;
 using AeroBus.Core.Model.Order;
 using AeroBus.Core.Repositories.Order;
@@ -29,17 +30,20 @@ namespace AeroBus.Core.Services.Distribution
         private readonly IOrders _orders;
         private readonly IInventoryService _inventory;
         private readonly DecisionRunner _decisions;
+        private readonly IEventPublisher _events;
         private readonly ILogger<OrderChangeService> _log;
 
         public OrderChangeService(
             IOrders orders,
             IInventoryService inventory,
             DecisionRunner decisions,
+            IEventPublisher events,
             ILogger<OrderChangeService> log)
         {
             _orders = orders;
             _inventory = inventory;
             _decisions = decisions;
+            _events = events;
             _log = log;
         }
 
@@ -111,7 +115,6 @@ namespace AeroBus.Core.Services.Distribution
             {
                 await ReleaseOrderInventoryAsync(order, ct);
                 response.InventoryReleased = true;
-                // events: inventory.adjusted via outbox in Phase 6
             }
 
             // ── apply + persist ───────────────────────────────────────────────
@@ -135,7 +138,25 @@ namespace AeroBus.Core.Services.Distribution
             MarkItemsStatus(updated, newStatus);
 
             await _orders.SaveAsync(updated, ct);
-            // events: order.changed|order.cancelled via outbox in Phase 6
+
+            // A Cancel emits the specific order.cancelled; every other transition
+            // emits the generic order.changed. Both carry the from/to status so a
+            // subscriber can react without re-fetching the order.
+            var eventType = request.Action == OrderStateMachine.Action.Cancel
+                ? "order.cancelled"
+                : "order.changed";
+            await _events.PublishAsync(eventType,
+                new EventSubject("orders", updated.Id.ToString()),
+                new
+                {
+                    orderId = updated.OrderId,
+                    id = updated.Id,
+                    action = request.Action,
+                    fromStatus = currentStatus,
+                    toStatus = newStatus,
+                    reason = request.Reason,
+                },
+                updated.CompanyId, actor: "order-change", ct);
 
             response.NewStatus = newStatus;
             response.Action = request.Action;
@@ -164,7 +185,12 @@ namespace AeroBus.Core.Services.Distribution
                 try
                 {
                     var result = await _inventory.ReleaseAsync(companyId, flightId, bucket, seats, ct);
-                    if (!result.Success)
+                    if (result.Success)
+                        await _events.PublishAsync("inventory.adjusted",
+                            new EventSubject("flightinventory", flightId.ToString()),
+                            new { flightId, bucket, delta = seats, reason = "order.cancel" },
+                            companyId, actor: "order-change", ct);
+                    else
                         _log.LogWarning(
                             "Inventory release on cancel for order {OrderRef} flight {FlightId}/{Bucket} returned {Reason}.",
                             order.OrderId, flightId, bucket, result.Reason);

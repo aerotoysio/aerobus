@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AeroBus.Core.Common.Cache;
+using AeroBus.Core.Events;
 using AeroBus.Core.Model.Catalogue;
 using AeroBus.Core.Model.Distribution;
 using AeroBus.Core.Repositories.Catalogue;
@@ -24,6 +25,7 @@ namespace AeroBus.Core.Services.Distribution
         private readonly IOffers _offers;
         private readonly IFlights _flights;
         private readonly IHotCache _cache;
+        private readonly IEventPublisher _events;
         private readonly ILogger<OfferShopService> _log;
 
         public OfferShopService(
@@ -32,6 +34,7 @@ namespace AeroBus.Core.Services.Distribution
             IOffers offers,
             IFlights flights,
             IHotCache cache,
+            IEventPublisher events,
             ILogger<OfferShopService> log)
         {
             _directFlightSolutions = directFlightSolutions;
@@ -39,6 +42,7 @@ namespace AeroBus.Core.Services.Distribution
             _offers = offers;
             _flights = flights;
             _cache = cache;
+            _events = events;
             _log = log;
         }
 
@@ -190,6 +194,19 @@ namespace AeroBus.Core.Services.Distribution
                 };
                 await _offers.SaveAsync(offer, ct);
                 _offerIdBySearch = offer.Id;
+
+                await _events.PublishAsync("offer.created",
+                    new EventSubject("offers", offer.Id.ToString()),
+                    new
+                    {
+                        id = offer.Id,
+                        searchId = offer.SearchId,
+                        channel = offer.Channel,
+                        currency = offer.Currency,
+                        passengers = offer.Passengers?.Count ?? 0,
+                        expiresAt = offer.ExpiresAt,
+                    },
+                    companyId, actor: "offer-shop", ct);
             }
             catch (Exception ex)
             {

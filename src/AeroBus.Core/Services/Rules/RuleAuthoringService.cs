@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AeroBus.Core.Data;
+using AeroBus.Core.Events;
 using AeroBus.Core.Rules;
 
 namespace AeroBus.Core.Services.Rules
@@ -28,11 +29,13 @@ namespace AeroBus.Core.Services.Rules
 
         private readonly IDocumentForgeClient _df;
         private readonly IRuleForgeClient _ruleForge;
+        private readonly IEventPublisher _events;
 
-        public RuleAuthoringService(IDocumentForgeClient df, IRuleForgeClient ruleForge)
+        public RuleAuthoringService(IDocumentForgeClient df, IRuleForgeClient ruleForge, IEventPublisher events)
         {
             _df = df;
             _ruleForge = ruleForge;
+            _events = events;
         }
 
         // ─── rules ────────────────────────────────────────────────────────────
@@ -118,6 +121,14 @@ namespace AeroBus.Core.Services.Rules
             await BindEnvironmentAsync(env, id, next, ct);
 
             var refreshed = await _ruleForge.RefreshAsync(ct);
+
+            // Rules are RuleForge-global (string ids, no owning company), so this is
+            // a cross-tenant event — companyId null routes it to the "global" cursor.
+            await _events.PublishAsync("rule.published",
+                new EventSubject(RulesCollection, id),
+                new { ruleId = id, version = next, env, refreshed },
+                companyId: null, actor: "rules-authoring", ct);
+
             return new PublishResult(id, next, env, refreshed);
         }
 

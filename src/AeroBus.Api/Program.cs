@@ -1,5 +1,6 @@
 using AeroBus.Core.Common.Cache;
 using AeroBus.Core.Data;
+using AeroBus.Core.Events;
 using AeroBus.Core.Repositories.Admin;
 using AeroBus.Core.Repositories.Catalogue;
 using AeroBus.Core.Repositories.Customer;
@@ -53,6 +54,11 @@ builder.Services.AddOrders();
 
 // Rules authoring proxy over RuleForge's DocumentForge collections.
 builder.Services.AddRulesAuthoring();
+
+// Events backbone: transactional outbox publisher, the background dispatcher
+// (webhook fan-out with retry/backoff), and webhook-subscription repo. The
+// domain services depend on IEventPublisher to emit at their change sites.
+builder.Services.AddEvents(builder.Configuration);
 
 var app = builder.Build();
 

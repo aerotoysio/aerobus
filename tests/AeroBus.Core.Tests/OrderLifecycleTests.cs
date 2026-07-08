@@ -51,10 +51,10 @@ public class OrderLifecycleTests(DocumentForgeFixture fx)
 
     private OrderCreateService CreateService() =>
         new(new Companies(fx.Store), new Orders(fx.Store), new Offers(fx.Store),
-            Inventory(), Runner(), NullLogger<OrderCreateService>.Instance);
+            Inventory(), Runner(), EventsTestHelpers.Publisher(fx), NullLogger<OrderCreateService>.Instance);
 
     private OrderChangeService ChangeService() =>
-        new(new Orders(fx.Store), Inventory(), Runner(), NullLogger<OrderChangeService>.Instance);
+        new(new Orders(fx.Store), Inventory(), Runner(), EventsTestHelpers.Publisher(fx), NullLogger<OrderChangeService>.Instance);
 
     private OrderRetrieveService RetrieveService() =>
         new(new Companies(fx.Store), new Orders(fx.Store));

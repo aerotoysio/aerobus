@@ -4,6 +4,7 @@ using AeroBus.Api.Endpoints.Admin;
 using AeroBus.Api.Endpoints.Catalogue;
 using AeroBus.Api.Endpoints.Customer;
 using AeroBus.Api.Endpoints.Diagnostics;
+using AeroBus.Api.Endpoints.Events;
 using AeroBus.Api.Endpoints.Offer;
 using AeroBus.Api.Endpoints.Order;
 using AeroBus.Api.Endpoints.Rules;
@@ -86,6 +87,12 @@ namespace AeroBus.Api.Bootstrap
 
             // Rules authoring proxy over RuleForge's DocumentForge collections.
             app.MapGroup("/rules").WithTags("Rules").RulesMapping().RequireAuthorization();
+
+            // Events backbone — outbox audit trail (/events), SSE stream
+            // (/events/stream), and webhook subscription CRUD
+            // (/events/subscriptions). All company-scoped, so authorization is
+            // required at the group level like the other domain groups.
+            app.MapGroup("/events").WithTags("Events").EventsMapping().RequireAuthorization();
 
             return app;
         }

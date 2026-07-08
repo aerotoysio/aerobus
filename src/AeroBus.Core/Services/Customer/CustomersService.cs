@@ -1,10 +1,12 @@
+using AeroBus.Core.Events;
 using AeroBus.Core.Repositories.Customer;
 
 namespace AeroBus.Core.Services.Customer
 {
-    public sealed class CustomersService(ICustomers repo)
+    public sealed class CustomersService(ICustomers repo, IEventPublisher events)
     {
         private readonly ICustomers _repo = repo;
+        private readonly IEventPublisher _events = events;
 
         public Task<Model.Customer.Customer?> GetByIdAsync(
             Guid id,
@@ -38,10 +40,25 @@ namespace AeroBus.Core.Services.Customer
                 pageSize,
                 ct);
 
-        public Task<Model.Customer.Customer?> SaveAsync(
+        public async Task<Model.Customer.Customer?> SaveAsync(
             Model.Customer.Customer model,
-            CancellationToken ct = default) =>
-            _repo.SaveAsync(model, ct);
+            CancellationToken ct = default)
+        {
+            // customer.created fires only for a genuinely new customer, so probe for
+            // an existing document first (an update should not re-announce a create).
+            var isNew = model.Id == Guid.Empty || await _repo.GetByIdAsync(model.Id, ct) is null;
+
+            var saved = await _repo.SaveAsync(model, ct);
+            if (isNew)
+            {
+                var c = saved ?? model;
+                await _events.PublishAsync("customer.created",
+                    new EventSubject("customers", c.Id.ToString()),
+                    new { id = c.Id, customerNumber = c.CustomerNumber, lastName = c.LastName, status = c.Status },
+                    c.CompanyId, actor: "customers", ct);
+            }
+            return saved;
+        }
 
         public Task<bool> DeleteAsync(
             Guid id,

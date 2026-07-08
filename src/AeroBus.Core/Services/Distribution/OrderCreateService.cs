@@ -1,3 +1,4 @@
+using AeroBus.Core.Events;
 using AeroBus.Core.Model.Distribution;
 using AeroBus.Core.Model.Order;
 using AeroBus.Core.Repositories.Admin;
@@ -34,6 +35,7 @@ namespace AeroBus.Core.Services.Distribution
         private readonly IOffers _offers;
         private readonly IInventoryService _inventory;
         private readonly DecisionRunner _decisions;
+        private readonly IEventPublisher _events;
         private readonly ILogger<OrderCreateService> _log;
 
         public OrderCreateService(
@@ -42,6 +44,7 @@ namespace AeroBus.Core.Services.Distribution
             IOffers offers,
             IInventoryService inventory,
             DecisionRunner decisions,
+            IEventPublisher events,
             ILogger<OrderCreateService> log)
         {
             _companies = companies;
@@ -49,6 +52,7 @@ namespace AeroBus.Core.Services.Distribution
             _offers = offers;
             _inventory = inventory;
             _decisions = decisions;
+            _events = events;
             _log = log;
         }
 
@@ -108,7 +112,11 @@ namespace AeroBus.Core.Services.Distribution
             foreach (var (flightId, bucket) in legs)
             {
                 var sell = await _inventory.SellAsync(company.Id, flightId, bucket, seats, ct);
-                // events: inventory.adjusted via outbox in Phase 6
+                if (sell.Success)
+                    await _events.PublishAsync("inventory.adjusted",
+                        new EventSubject("flightinventory", flightId.ToString()),
+                        new { flightId, bucket, delta = -seats, reason = "order.create" },
+                        company.Id, actor: "order-create", ct);
                 if (!sell.Success)
                 {
                     await CompensateAsync(company.Id, sold, seats, ct);
@@ -142,7 +150,19 @@ namespace AeroBus.Core.Services.Distribution
             MarkItemsStatus(confirmed, "Confirmed");
 
             var saved = await _orders.SaveAsync(confirmed, ct) ?? confirmed;
-            // events: order.created via outbox in Phase 6
+            await _events.PublishAsync("order.created",
+                new EventSubject("orders", saved.Id.ToString()),
+                new
+                {
+                    orderId = saved.OrderId,
+                    id = saved.Id,
+                    status = saved.Status,
+                    channel = saved.Channel,
+                    currency = confirmed.OrderItems?.FirstOrDefault()?.Currency,
+                    amount = confirmed.OrderItems?.FirstOrDefault()?.Amount,
+                    passengers = saved.Passengers?.Count ?? 0,
+                },
+                saved.CompanyId, actor: "order-create", ct);
 
             return OrderCreateResult.Created(BuildView(saved));
         }
@@ -344,7 +364,10 @@ namespace AeroBus.Core.Services.Distribution
                 try
                 {
                     await _inventory.ReleaseAsync(companyId, flightId, bucket, seats, ct);
-                    // events: inventory.adjusted via outbox in Phase 6
+                    await _events.PublishAsync("inventory.adjusted",
+                        new EventSubject("flightinventory", flightId.ToString()),
+                        new { flightId, bucket, delta = seats, reason = "order.create.compensate" },
+                        companyId, actor: "order-create", ct);
                 }
                 catch (Exception ex)
                 {

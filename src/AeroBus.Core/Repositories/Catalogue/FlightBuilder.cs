@@ -1,4 +1,5 @@
 using AeroBus.Core.Common.Cache;
+using AeroBus.Core.Events;
 using AeroBus.Core.Model.Catalogue;
 using AeroBus.Core.Model.Stock;
 using AeroBus.Core.Repositories.Stock;
@@ -28,16 +29,18 @@ namespace AeroBus.Core.Repositories.Catalogue
         private readonly ILayouts _layouts;
         private readonly IFlightInventories _inventories;
         private readonly ITimeZoneResolver _tz;
+        private readonly IEventPublisher _events;
 
         // (The ooms constructor also took IAirportResolver + IHotCache; both were
         // dead in the extraction path and are dropped here.)
-        public FlightBuilder(ISchedules schedules, IFlights flights, ILayouts layouts, IFlightInventories inventories, ITimeZoneResolver tz)
+        public FlightBuilder(ISchedules schedules, IFlights flights, ILayouts layouts, IFlightInventories inventories, ITimeZoneResolver tz, IEventPublisher events)
         {
             _schedules = schedules;
             _flights = flights;
             _layouts = layouts;
             _inventories = inventories;
             _tz = tz;
+            _events = events;
         }
 
         public async Task<bool> RefreshAllAsync(Guid companyId, CancellationToken ct = default)
@@ -67,12 +70,12 @@ namespace AeroBus.Core.Repositories.Catalogue
             {
                 await _flights.SaveAsync(candidate, ct);
                 await CreateInventoryAsync(candidate, layout, ct);
-                // events: outbox in Phase 6 (flight.built)
+                await PublishFlightBuiltAsync(candidate, ct);
             }
 
             schedule.Status = "Built";
             await _schedules.SaveAsync(schedule, ct);
-            // events: outbox in Phase 6 (schedule.changed)
+            await PublishScheduleChangedAsync(schedule, ct);
 
             return await _flights.GetByScheduleIdAsync(scheduleId, ct);
         }
@@ -135,7 +138,7 @@ namespace AeroBus.Core.Repositories.Catalogue
                     var replacement = BuildFlightInstance(newSchedule, flightDateLocal, newLayout);
                     await _flights.SaveAsync(replacement, ct);
                     await CreateInventoryAsync(replacement, newLayout, ct);
-                    // events: outbox in Phase 6 (flight.built)
+                    await PublishFlightBuiltAsync(replacement, ct);
                     continue;
                 }
 
@@ -164,7 +167,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
             previousSchedule.Status = "Replaced";
             await _schedules.SaveAsync(previousSchedule, ct);
-            // events: outbox in Phase 6 (schedule.changed)
+            await PublishScheduleChangedAsync(newSchedule, ct);
 
             return await _flights.GetByScheduleIdAsync(newSchedule.Id, ct);
         }
@@ -330,11 +333,57 @@ namespace AeroBus.Core.Repositories.Catalogue
         /// </summary>
         private async Task CancelFlightAsync(Flight flight, Guid newScheduleId, CancellationToken ct)
         {
-            await _flights.SaveAsync(flight with { ScheduleId = newScheduleId, Status = "Cancelled", Updated = DateTime.UtcNow }, ct);
+            var cancelled = flight with { ScheduleId = newScheduleId, Status = "Cancelled", Updated = DateTime.UtcNow };
+            await _flights.SaveAsync(cancelled, ct);
             foreach (var inv in await _inventories.GetByFlightAsync(flight.Id, ct))
                 await _inventories.SaveAsync(inv with { Status = "Cancelled", Updated = DateTime.UtcNow }, ct);
-            // events: outbox in Phase 6 (flight.cancelled)
+            await PublishFlightCancelledAsync(cancelled, ct);
         }
+
+        // ── event emit helpers ─────────────────────────────────────────────────
+        // Best-effort: IEventPublisher.PublishAsync never throws, so a publish
+        // failure can't abort a build/refresh.
+
+        private Task PublishFlightBuiltAsync(Flight flight, CancellationToken ct) =>
+            _events.PublishAsync("flight.built",
+                new EventSubject("flights", flight.Id.ToString()),
+                new
+                {
+                    id = flight.Id,
+                    scheduleId = flight.ScheduleId,
+                    flightNumber = flight.FlightNumber,
+                    origin = flight.DepartureStation,
+                    destination = flight.ArrivalStation,
+                    departureUtc = flight.DepartureDateTime,
+                    arrivalUtc = flight.ArrivalDateTime,
+                },
+                flight.CompanyId, actor: "flight-builder", ct);
+
+        private Task PublishFlightCancelledAsync(Flight flight, CancellationToken ct) =>
+            _events.PublishAsync("flight.cancelled",
+                new EventSubject("flights", flight.Id.ToString()),
+                new
+                {
+                    id = flight.Id,
+                    scheduleId = flight.ScheduleId,
+                    flightNumber = flight.FlightNumber,
+                    origin = flight.DepartureStation,
+                    destination = flight.ArrivalStation,
+                    departureUtc = flight.DepartureDateTime,
+                },
+                flight.CompanyId, actor: "flight-builder", ct);
+
+        private Task PublishScheduleChangedAsync(Schedule schedule, CancellationToken ct) =>
+            _events.PublishAsync("schedule.changed",
+                new EventSubject("schedules", schedule.Id.ToString()),
+                new
+                {
+                    id = schedule.Id,
+                    status = schedule.Status,
+                    flightNumber = schedule.FlightNumber,
+                    groupingId = schedule.GroupingId,
+                },
+                schedule.CompanyId, actor: "flight-builder", ct);
 
         // ---------- helpers ----------
 

@@ -17,7 +17,7 @@ public class FlightExtractionTests(DocumentForgeFixture fx)
         var flights = new Flights(fx.Store);
         var layouts = new Layouts(fx.Store);
         var inventories = new FlightInventories(fx.Store);
-        var builder = new FlightBuilder(schedules, flights, layouts, inventories, new UtcTz());
+        var builder = new FlightBuilder(schedules, flights, layouts, inventories, new UtcTz(), EventsTestHelpers.Publisher(fx));
         return (schedules, flights, inventories, builder);
     }
 
