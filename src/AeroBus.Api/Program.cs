@@ -1,5 +1,8 @@
+using AeroBus.Core.Common.Cache;
 using AeroBus.Core.Data;
 using AeroBus.Core.Repositories.Admin;
+using AeroBus.Core.Repositories.Catalogue;
+using AeroBus.Core.Repositories.Customer;
 using AeroBus.Core.Security;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +20,17 @@ builder.Services.AddSecurity(builder.Configuration);
 // Admin (control plane): companies, users, roles, permissions, workspaces,
 // company configs, API tokens.
 builder.Services.AddAdmin();
+
+// In-process hot cache + lazy resolvers (airport / time zone / MCT / company).
+// No boot-time preload: resolvers populate the cache on first request.
+builder.Services.AddCache();
+
+// Catalogue: reference data, fleet, schedules/flights + flight builder (with
+// per-flight inventory initialisation), products/bundles/stock, shopping engines.
+builder.Services.AddCatalogue();
+
+// Customer: the customer aggregate (passports/stored cards embedded).
+builder.Services.AddCustomer();
 
 var app = builder.Build();
 
