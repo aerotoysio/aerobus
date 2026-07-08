@@ -5,6 +5,7 @@ using AeroBus.Api.Endpoints.Catalogue;
 using AeroBus.Api.Endpoints.Customer;
 using AeroBus.Api.Endpoints.Diagnostics;
 using AeroBus.Api.Endpoints.Offer;
+using AeroBus.Api.Endpoints.Order;
 using AeroBus.Api.Endpoints.Rules;
 using AeroBus.Core.Common;
 
@@ -77,6 +78,11 @@ namespace AeroBus.Api.Bootstrap
             // /offer/offer-engine/{slug} is intentionally NOT mapped (ooms node
             // handlers are permanently dropped).
             app.MapGroup("/offer").WithTags("Offer").OfferMapping().RequireAuthorization();
+
+            // Order lifecycle — create (inventory decrement) / retrieve / change
+            // (cancel releases inventory). Routes identical to the ooms
+            // order-management service.
+            app.MapGroup("/order").WithTags("Order").OrderMapping().RequireAuthorization();
 
             // Rules authoring proxy over RuleForge's DocumentForge collections.
             app.MapGroup("/rules").WithTags("Rules").RulesMapping().RequireAuthorization();
