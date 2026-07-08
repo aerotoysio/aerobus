@@ -56,12 +56,25 @@ npm install
 npm run dev        # next dev -p 3002
 ```
 
-- **Node 20 LTS** (no `.nvmrc`/`engines`; deps imply Node 20 — `@types/node 20.x`).
+- **Node 20 LTS — required, not just recommended** (no `.nvmrc`/`engines`; deps imply
+  Node 20 — `@types/node 20.x`).
 - Next.js **14** (App Router), React 18.3, TypeScript 5.4.
 - Dev server: **http://localhost:3002** (the README's "port 3000 / login a/a" text
   is stale starter boilerplate — ignore it).
 
 Make sure AeroBus is up first (`scripts/run-stack.ps1`, AeroBus on `:5080`).
+
+### Troubleshooting: "Something went wrong / An error occurred in the Server Components render"
+
+If the **login page renders and submitting reaches AeroBus** (you see
+`POST /admin/users/{slug}/authenticate → 200` in the AeroBus log) but the browser
+then lands on a generic *"An error occurred in the Server Components render"* page,
+this is almost always a **Node runtime mismatch, not an AeroBus problem**. Next.js
+14.2's server-action + RSC handling is unstable on **Node 22 / 23 / 24** and throws
+this exact digest-only error on the first authenticated (`(app)`) render, regardless
+of the backend. Run the UI on **Node 20 LTS** (`nvm install 20 && nvm use 20`, or
+fnm/volta) and it renders. The authenticate call succeeding proves the AeroBus wiring
+is correct; the crash is downstream in the UI's own server render.
 
 ## Login creds
 
