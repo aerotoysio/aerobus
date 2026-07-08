@@ -12,6 +12,13 @@ namespace AeroBus.Core.Model.Shopping
         public int ElapsedDurationMinutes { get; set; }
         public string? Cabin { get; set; }
         public List<FlightSegment>? Flights { get; set; }
+
+        // Priced fare bundles for this solution, produced by the RuleForge
+        // ShopBundles decision point. Added in Phase 4 (the offer/bundle payload
+        // was previously kept out of the shop model): the shop response now
+        // carries bundles alongside the flight search. Empty when RuleForge is
+        // unavailable/degraded (see OfferShopResponse.Warnings).
+        public List<Distribution.ShopBundle>? Bundles { get; set; }
     }
 
     public sealed class FlightSegment

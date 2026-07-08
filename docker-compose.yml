@@ -1,13 +1,14 @@
-# AeroBus dev stack — DocumentForge + AeroBus.
-# RuleForge joins in Phase 4 (rules/pricing decision points).
+# AeroBus dev stack — DocumentForge + RuleForge + AeroBus.
 #
 # Quickstart:
 #   docker compose up -d
 #   curl http://localhost:5080/health
 #   curl http://localhost:5080/health/documentforge
+#   curl http://localhost:5055/health              # RuleForge (open)
 #
 # DFDB_API_KEY defaults to a dev-only key; override it in a .env file for
-# anything beyond local tinkering.
+# anything beyond local tinkering. RULEFORGE_API_KEY is the caller-side
+# X-AERO-Key shared secret between AeroBus and RuleForge.
 
 services:
   documentforge:
@@ -27,6 +28,33 @@ services:
       start_period: 10s
       retries: 3
 
+  # RuleForge — the runtime rules engine AeroBus calls at named decision points.
+  # Reads its rules/reference-sets/env-bindings from the sibling DocumentForge
+  # instance (rule source = df). Published image name + env var names are taken
+  # from the RuleForge repo's own compose/README; the caller auth header is
+  # X-AERO-Key and /health is open.
+  ruleforge:
+    image: ghcr.io/aerotoysio/ruleforge:latest
+    container_name: aerobus-ruleforge
+    restart: unless-stopped
+    environment:
+      - RULEFORGE_RULE_SOURCE=df
+      - RULEFORGE_DF_BASE_URL=http://documentforge:4300
+      - RULEFORGE_DF_API_KEY=${DFDB_API_KEY:-aerobus-dev-key}
+      - RULEFORGE_ENV=dev
+      - RULEFORGE_API_KEY=${RULEFORGE_API_KEY:-aerobus-dev-ruleforge-key}
+    ports:
+      - "127.0.0.1:5055:8080"
+    depends_on:
+      documentforge:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/health > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 3s
+      start_period: 15s
+      retries: 3
+
   aerobus:
     build:
       context: .
@@ -36,10 +64,14 @@ services:
     environment:
       - DocumentForge__BaseUrl=http://documentforge:4300
       - DocumentForge__ApiKey=${DFDB_API_KEY:-aerobus-dev-key}
+      - RuleForge__BaseUrl=http://ruleforge:8080
+      - RuleForge__ApiKey=${RULEFORGE_API_KEY:-aerobus-dev-ruleforge-key}
     ports:
       - "127.0.0.1:5080:8080"
     depends_on:
       documentforge:
+        condition: service_healthy
+      ruleforge:
         condition: service_healthy
 
 volumes:

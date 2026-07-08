@@ -3,7 +3,10 @@ using AeroBus.Core.Data;
 using AeroBus.Core.Repositories.Admin;
 using AeroBus.Core.Repositories.Catalogue;
 using AeroBus.Core.Repositories.Customer;
+using AeroBus.Core.Rules;
 using AeroBus.Core.Security;
+using AeroBus.Core.Services.Distribution;
+using AeroBus.Core.Services.Rules;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +34,16 @@ builder.Services.AddCatalogue();
 
 // Customer: the customer aggregate (passports/stored cards embedded).
 builder.Services.AddCustomer();
+
+// RuleForge: typed client + DecisionRunner for the named decision points.
+// Bound from the "RuleForge" config section (BaseUrl/ApiKey/TimeoutMs/Endpoints).
+builder.Services.AddRuleForge(builder.Configuration);
+
+// Offer distribution: shop runtime, RuleForge bundle builder, re-pricing, offers repo.
+builder.Services.AddOffer();
+
+// Rules authoring proxy over RuleForge's DocumentForge collections.
+builder.Services.AddRulesAuthoring();
 
 var app = builder.Build();
 

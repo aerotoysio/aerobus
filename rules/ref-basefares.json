@@ -1,0 +1,12 @@
+{
+  "id": "ref-basefares",
+  "name": "O&D base fares",
+  "currentVersion": 0,
+  "columns": ["origin", "destination", "fare", "currency"],
+  "rows": [
+    { "origin": "SYD", "destination": "MEL", "fare": 180, "currency": "AED" },
+    { "origin": "MEL", "destination": "SYD", "fare": 180, "currency": "AED" },
+    { "origin": "SYD", "destination": "BNE", "fare": 210, "currency": "AED" },
+    { "origin": "MEL", "destination": "BNE", "fare": 240, "currency": "AED" }
+  ]
+}

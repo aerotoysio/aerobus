@@ -4,6 +4,8 @@ using AeroBus.Api.Endpoints.Admin;
 using AeroBus.Api.Endpoints.Catalogue;
 using AeroBus.Api.Endpoints.Customer;
 using AeroBus.Api.Endpoints.Diagnostics;
+using AeroBus.Api.Endpoints.Offer;
+using AeroBus.Api.Endpoints.Rules;
 using AeroBus.Core.Common;
 
 namespace AeroBus.Api.Bootstrap
@@ -70,6 +72,14 @@ namespace AeroBus.Api.Bootstrap
 
             // Customer
             app.MapGroup("/customer").WithTags("Customer Management").CustomersMapping().RequireAuthorization();
+
+            // Offer distribution — shop + re-price (RuleForge decision points).
+            // /offer/offer-engine/{slug} is intentionally NOT mapped (ooms node
+            // handlers are permanently dropped).
+            app.MapGroup("/offer").WithTags("Offer").OfferMapping().RequireAuthorization();
+
+            // Rules authoring proxy over RuleForge's DocumentForge collections.
+            app.MapGroup("/rules").WithTags("Rules").RulesMapping().RequireAuthorization();
 
             return app;
         }

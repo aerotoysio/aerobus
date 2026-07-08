@@ -1,0 +1,11 @@
+{
+  "id": "ref-bundle-markups",
+  "name": "Fare tier markups",
+  "currentVersion": 0,
+  "columns": ["code", "tier", "markup"],
+  "rows": [
+    { "code": "LITE", "tier": "Lite", "markup": 1.0 },
+    { "code": "FLEX", "tier": "Flex", "markup": 1.3 },
+    { "code": "FLEXPLUS", "tier": "Flex Plus", "markup": 1.6 }
+  ]
+}
