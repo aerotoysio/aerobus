@@ -1,0 +1,47 @@
+# AeroBus dev stack — DocumentForge + AeroBus.
+# RuleForge joins in Phase 4 (rules/pricing decision points).
+#
+# Quickstart:
+#   docker compose up -d
+#   curl http://localhost:5080/health
+#   curl http://localhost:5080/health/documentforge
+#
+# DFDB_API_KEY defaults to a dev-only key; override it in a .env file for
+# anything beyond local tinkering.
+
+services:
+  documentforge:
+    image: ghcr.io/aerotoysio/documentforge:latest
+    container_name: aerobus-documentforge
+    restart: unless-stopped
+    environment:
+      - DFDB_API_KEY=${DFDB_API_KEY:-aerobus-dev-key}
+    ports:
+      - "127.0.0.1:4300:4300"
+    volumes:
+      - aerobus-dfdb-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4300/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+  aerobus:
+    build:
+      context: .
+      dockerfile: src/AeroBus.Api/Dockerfile
+    container_name: aerobus
+    restart: unless-stopped
+    environment:
+      - DocumentForge__BaseUrl=http://documentforge:4300
+      - DocumentForge__ApiKey=${DFDB_API_KEY:-aerobus-dev-key}
+    ports:
+      - "127.0.0.1:5080:8080"
+    depends_on:
+      documentforge:
+        condition: service_healthy
+
+volumes:
+  aerobus-dfdb-data:
+    name: aerobus-dfdb-data

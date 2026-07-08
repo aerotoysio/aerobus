@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AeroBus.Core/AeroBus.Core.csproj" />
+    <Project Path="src/AeroBus.Api/AeroBus.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AeroBus.Core.Tests/AeroBus.Core.Tests.csproj" />
+  </Folder>
+</Solution>

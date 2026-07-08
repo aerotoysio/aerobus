@@ -1,0 +1,20 @@
+## .NET
+bin/
+obj/
+dist/
+*.user
+*.suo
+.vs/
+.idea/
+artifacts/
+TestResults/
+
+## Local secrets & data
+.env
+*.local.json
+data/
+*.dfdb
+
+## OS
+Thumbs.db
+.DS_Store
