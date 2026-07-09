@@ -206,6 +206,7 @@ namespace AeroBus.Core.Services.Distribution
                 };
                 await _offers.SaveAsync(offer, ct);
                 _offerIdBySearch = offer.Id;
+                response.OfferId = offer.Id;
 
                 await _events.PublishAsync("offer.created",
                     new EventSubject("offers", offer.Id.ToString()),

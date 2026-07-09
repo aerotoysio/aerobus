@@ -72,12 +72,23 @@ namespace AeroBus.Core.Services.Distribution
             if (offer.ExpiresAt is { } exp && exp < DateTime.UtcNow)
                 return OrderCreateResult.Fail("offerExpired", "Offer has expired; re-shop.");
 
-            // Choose the solution + bundle the caller booked (defaults: first
-            // solution carrying bundles, cheapest priced bundle on it).
-            var picked = PickSolution(offer, request.SolutionId, request.BundleId);
-            if (picked is null)
-                return OrderCreateResult.Fail("noBundle", "No priced bundle found on the offer for the requested selection.");
-            var (solution, bundle) = picked.Value;
+            // Choose the solution(s) + bundle(s) the caller booked. Multi-bound
+            // orders pass Selections (one per O&D); the legacy single
+            // SolutionId/BundleId pair still works (defaults: first solution
+            // carrying bundles, cheapest priced bundle on it).
+            var requestedSelections = request.Selections is { Count: > 0 }
+                ? request.Selections.Select(s => (s.SolutionId, s.BundleId)).ToList()
+                : new List<(Guid?, Guid?)> { (request.SolutionId, request.BundleId) };
+
+            var picks = new List<(Model.Shopping.FlightSolution Solution, ShopBundle Bundle)>();
+            foreach (var (solutionId, bundleId) in requestedSelections)
+            {
+                var picked = PickSolution(offer, solutionId, bundleId);
+                if (picked is null)
+                    return OrderCreateResult.Fail("noBundle", "No priced bundle found on the offer for the requested selection.");
+                picks.Add(picked.Value);
+            }
+            var (solution, bundle) = picks[0];
 
             // ── RuleForge OrderValidate (best-effort policy hook) ─────────────
             // Default failure mode is Allow: a RuleForge outage must never block a
@@ -90,6 +101,7 @@ namespace AeroBus.Core.Services.Distribution
                 offerId = offer.Id,
                 passengers = request.Passengers.Select(p => new { id = p.Id, type = p.PaxType, lastName = p.LastName }),
                 bundleId = bundle.Id,
+                bundleIds = picks.Select(p => p.Bundle.Id),
             }, debug, ct);
 
             if (IsDenied(validate))
@@ -99,7 +111,7 @@ namespace AeroBus.Core.Services.Distribution
             }
 
             // ── build the order aggregate (still Pending) ─────────────────────
-            var order = BuildOrder(request, company, offer, solution, bundle);
+            var order = BuildOrder(request, company, offer, picks);
 
             // ── decrement inventory for every flight leg BEFORE confirming ────
             // One seat per passenger per (flight, bucket). Sell each leg in turn;
@@ -173,8 +185,7 @@ namespace AeroBus.Core.Services.Distribution
             OrderCreateRequest request,
             Model.Admin.Company company,
             Offer offer,
-            Model.Shopping.FlightSolution solution,
-            ShopBundle bundle)
+            IReadOnlyList<(Model.Shopping.FlightSolution Solution, ShopBundle Bundle)> picks)
         {
             var now = DateTime.UtcNow;
             var companyId = company.Id;
@@ -188,81 +199,87 @@ namespace AeroBus.Core.Services.Distribution
                 pax.CompanyId ??= companyId;
             }
 
-            var currency = bundle.Price?.Currency ?? offer.Currency ?? "AED";
-            var bundleAmount = bundle.Price?.Total ?? 0m;
+            var currency = picks[0].Bundle.Price?.Currency ?? offer.Currency ?? "AED";
+            var totalAmount = picks.Sum(p => p.Bundle.Price?.Total ?? 0m);
 
-            // Flight services on the fare item come from the solution's legs. Bucket
-            // = the solution cabin (layout compartment) or "ALL" (single-bucket flight).
-            var bucket = string.IsNullOrWhiteSpace(solution.Cabin) ? "ALL" : solution.Cabin!;
-            var flightIds = ParseFlightIds(solution);
-
-            var services = new List<Service>();
-            foreach (var pax in request.Passengers)
+            // One order item per booked (solution, bundle) — a return booking is a
+            // single order with an outbound and a return item.
+            var orderItems = new List<OrderItem>();
+            foreach (var (solution, bundle) in picks)
             {
-                var flightServices = flightIds
-                    .Select(fid => new FlightService
+                // Flight services on the fare item come from the solution's legs. Bucket
+                // = the solution cabin (layout compartment) or "ALL" (single-bucket flight).
+                var bucket = string.IsNullOrWhiteSpace(solution.Cabin) ? "ALL" : solution.Cabin!;
+                var flightIds = ParseFlightIds(solution);
+
+                var services = new List<Service>();
+                foreach (var pax in request.Passengers)
+                {
+                    var flightServices = flightIds
+                        .Select(fid => new FlightService
+                        {
+                            Id = Guid.NewGuid(),
+                            FlightId = fid,
+                            Bucket = bucket,
+                            Status = "Open",
+                        })
+                        .ToList();
+
+                    services.Add(new Service
                     {
                         Id = Guid.NewGuid(),
-                        FlightId = fid,
-                        Bucket = bucket,
+                        Created = now,
+                        Updated = now,
+                        Type = "Flight",
                         Status = "Open",
-                    })
-                    .ToList();
+                        PassengerId = pax.Id,
+                        FlightServices = flightServices,
+                    });
+                }
 
-                services.Add(new Service
+                var charges = new List<OrderItemCharge>();
+                if (bundle.Price is { } price)
+                {
+                    charges.Add(new OrderItemCharge
+                    {
+                        Id = Guid.NewGuid(),
+                        AmountType = "Base",
+                        Code = "BASE",
+                        Currency = currency,
+                        Amount = price.Base,
+                        Status = "Active",
+                        Created = now,
+                        Updated = now,
+                    });
+                    if (price.Taxes > 0m)
+                        charges.Add(new OrderItemCharge
+                        {
+                            Id = Guid.NewGuid(),
+                            AmountType = "Tax",
+                            Code = "TAX",
+                            Currency = currency,
+                            Amount = price.Taxes,
+                            Status = "Active",
+                            Created = now,
+                            Updated = now,
+                        });
+                }
+
+                orderItems.Add(new OrderItem
                 {
                     Id = Guid.NewGuid(),
                     Created = now,
                     Updated = now,
                     Type = "Flight",
+                    Name = bundle.Name ?? bundle.BundleCode ?? "Fare",
+                    Description = bundle.Description,
                     Status = "Open",
-                    PassengerId = pax.Id,
-                    FlightServices = flightServices,
-                });
-            }
-
-            var charges = new List<OrderItemCharge>();
-            if (bundle.Price is { } price)
-            {
-                charges.Add(new OrderItemCharge
-                {
-                    Id = Guid.NewGuid(),
-                    AmountType = "Base",
-                    Code = "BASE",
+                    Amount = bundle.Price?.Total ?? 0m,
                     Currency = currency,
-                    Amount = price.Base,
-                    Status = "Active",
-                    Created = now,
-                    Updated = now,
+                    Charges = charges,
+                    Services = services,
                 });
-                if (price.Taxes > 0m)
-                    charges.Add(new OrderItemCharge
-                    {
-                        Id = Guid.NewGuid(),
-                        AmountType = "Tax",
-                        Code = "TAX",
-                        Currency = currency,
-                        Amount = price.Taxes,
-                        Status = "Active",
-                        Created = now,
-                        Updated = now,
-                    });
             }
-
-            var orderItem = new OrderItem
-            {
-                Id = Guid.NewGuid(),
-                Created = now,
-                Updated = now,
-                Type = "Flight",
-                Name = bundle.Name ?? bundle.BundleCode ?? "Fare",
-                Description = bundle.Description,
-                Status = "Open",
-                Amount = bundleAmount,
-                Currency = currency,
-                Charges = charges,
-                Services = services,
-            };
 
             var payments = new List<Payment>();
             if (request.Payment is { } pay)
@@ -273,7 +290,7 @@ namespace AeroBus.Core.Services.Distribution
                     Provider = pay.Provider,
                     Method = pay.Method,
                     Currency = string.IsNullOrWhiteSpace(pay.Currency) ? currency : pay.Currency,
-                    AuthorizedAmount = bundleAmount,
+                    AuthorizedAmount = totalAmount,
                     CapturedAmount = 0m,
                     RefundedAmount = 0m,
                     Status = "Pending",
@@ -300,7 +317,7 @@ namespace AeroBus.Core.Services.Distribution
                 ConcurrencyId = Guid.NewGuid(),
                 OrderSequence = sequence,
                 Status = OrderStateMachine.Status.Pending,
-                OrderItems = new List<OrderItem> { orderItem },
+                OrderItems = orderItems,
                 Payments = payments,
                 Passengers = request.Passengers,
                 History = new List<OrderHistory>(),

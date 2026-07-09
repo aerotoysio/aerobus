@@ -69,6 +69,10 @@ namespace AeroBus.Api.Endpoints.Customer
             {
                 try
                 {
+                    // Default the tenant from the caller's token so channel
+                    // clients (e.g. AeroWeb check-in) don't have to know it.
+                    if (customer.CompanyId is null || customer.CompanyId == Guid.Empty)
+                        customer = customer with { CompanyId = user.GetCompanyId() };
                     var saved = await svc.SaveAsync(customer);
                     return Results.Ok(saved);
                 }

@@ -30,9 +30,26 @@ namespace AeroBus.Core.Model.Distribution
         /// <summary>The chosen priced bundle on that solution (null → cheapest priced bundle).</summary>
         public Guid? BundleId { get; set; }
 
+        /// <summary>
+        /// Multi-bound selection: one entry per origin-destination the caller is
+        /// booking (e.g. outbound + return from a RETURN shop). Each entry picks a
+        /// solution + bundle within <see cref="OfferId"/>; the order carries one
+        /// order item per selection and inventory is secured across every leg of
+        /// every selection atomically. When set, <see cref="SolutionId"/>/<see cref="BundleId"/>
+        /// are ignored; when empty/null the legacy single-selection fields apply.
+        /// </summary>
+        public List<OrderSelection>? Selections { get; set; }
+
         public List<Passenger> Passengers { get; set; } = new();
 
         public PaymentRequest? Payment { get; set; }
+    }
+
+    /// <summary>One booked (solution, bundle) pick within the shopped offer.</summary>
+    public sealed class OrderSelection
+    {
+        public Guid? SolutionId { get; set; }
+        public Guid? BundleId { get; set; }
     }
 
     public sealed class PaymentRequest

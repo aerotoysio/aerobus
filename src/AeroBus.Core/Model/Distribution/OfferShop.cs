@@ -56,6 +56,11 @@ namespace AeroBus.Core.Model.Distribution
     public sealed class OfferShopResponse
     {
         public Guid SearchId { get; set; }
+
+        /// <summary>Id of the persisted <c>offers</c> document for this shop —
+        /// pass it straight to <c>POST /order/create</c>. Empty when persisting
+        /// the offer failed (the search itself still returns).</summary>
+        public Guid OfferId { get; set; }
         public string? Channel { get; set; }
         public string? Currency { get; set; }
         public List<OfferShopPassenger> Passengers { get; set; } = new();

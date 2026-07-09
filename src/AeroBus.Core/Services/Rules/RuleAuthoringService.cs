@@ -31,7 +31,10 @@ namespace AeroBus.Core.Services.Rules
         private readonly IRuleForgeClient _ruleForge;
         private readonly IEventPublisher _events;
 
-        public RuleAuthoringService(IDocumentForgeClient df, IRuleForgeClient ruleForge, IEventPublisher events)
+        public RuleAuthoringService(
+            [Microsoft.Extensions.DependencyInjection.FromKeyedServices(Data.ServiceCollectionExtensions.RulesClientKey)] IDocumentForgeClient df,
+            IRuleForgeClient ruleForge,
+            IEventPublisher events)
         {
             _df = df;
             _ruleForge = ruleForge;
