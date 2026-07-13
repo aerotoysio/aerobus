@@ -91,18 +91,23 @@ namespace AeroBus.Core.Data
             var sql = $"SELECT * FROM {collection}";
             if (!string.IsNullOrWhiteSpace(where)) sql += $" WHERE {where}";
 
+            // Paging is pushed to the server: DocumentForge applies OFFSET after
+            // ORDER BY and before LIMIT (skip-then-take), so page p of size s is
+            // exactly the old client-side Skip((p-1)*s).Take(s) slice.
+            if (page is { } p && size is { } s && p > 0 && s > 0)
+            {
+                sql += $" LIMIT {s}";
+                if (p > 1) sql += $" OFFSET {(p - 1) * s}";
+            }
+            else if (size is { } onlySize && onlySize > 0)
+            {
+                sql += $" LIMIT {onlySize}";
+            }
+
             var rows = await _client.QueryAsync(sql, ct);
 
-            // Paging is applied client-side: DocumentForge SQL LIMIT has no OFFSET,
-            // and admin/list volumes are modest. Slice deterministically here.
-            IEnumerable<JsonElement> sliced = rows;
-            if (page is { } p && size is { } s && p > 0 && s > 0)
-                sliced = rows.Skip((p - 1) * s).Take(s);
-            else if (size is { } onlySize && onlySize > 0)
-                sliced = rows.Take(onlySize);
-
-            var list = new List<T>();
-            foreach (var row in sliced)
+            var list = new List<T>(rows.Count);
+            foreach (var row in rows)
             {
                 var item = row.Deserialize<T>(Json);
                 if (item is not null) list.Add(item);
