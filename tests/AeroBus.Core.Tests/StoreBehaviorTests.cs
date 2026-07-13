@@ -78,6 +78,40 @@ public class StoreBehaviorTests(DocumentForgeFixture fx)
         foreach (var id in ids) await continents.DeleteAsync(id, Guid.Empty);
     }
 
+    // Paging is pushed into SQL (LIMIT/OFFSET, server-side skip-then-take).
+    // Page p of size s must be exactly the slice the old client-side
+    // Skip((p-1)*s).Take(s) produced over the same unpaged result.
+    [Fact]
+    public async Task Paged_query_returns_the_same_slice_as_the_unpaged_result()
+    {
+        var continents = new Continents(fx.Store);
+        var companyId = DocumentForgeFixture.NewCompany();
+        var ids = new List<Guid>();
+        for (var i = 0; i < 5; i++)
+        {
+            var id = Guid.NewGuid();
+            ids.Add(id);
+            await continents.SaveAsync(new Continent
+            {
+                Id = id, CompanyId = companyId, Name = $"Continent {i}", Code = $"P{i}", Status = "Active"
+            });
+        }
+
+        var filter = new Dictionary<string, object?> { ["CompanyId"] = companyId };
+        var all = await fx.Store.QueryAsync<Continent>("continents", filter);
+        Assert.Equal(5, all.Count);
+
+        var page2 = await fx.Store.QueryAsync<Continent>("continents", filter, page: 2, size: 2);
+        Assert.Equal(all.Skip(2).Take(2).Select(c => c.Id), page2.Select(c => c.Id));
+
+        var headOnly = await fx.Store.QueryAsync<Continent>("continents", filter, size: 3);
+        Assert.Equal(all.Take(3).Select(c => c.Id), headOnly.Select(c => c.Id));
+
+        Assert.Empty(await fx.Store.QueryAsync<Continent>("continents", filter, page: 4, size: 2));
+
+        foreach (var id in ids) await continents.DeleteAsync(id, Guid.Empty);
+    }
+
     // New in AeroBus: the conditional-update primitive (atomic compare-and-set,
     // the inventory building block). Guard holds -> mutation applies; guard
     // fails -> 409 with the failed condition and no write.
