@@ -151,26 +151,25 @@ if (-not (Wait-Http "$AeroBusUrl/health" 90)) {
 Write-Ok "AeroBus healthy at $AeroBusUrl"
 
 # -- 3. Publish the shop rule BEFORE RuleForge boots --------------------------
-# We need a bearer token to call /rules. Seed a throwaway admin user directly in
-# dfdb and authenticate, then run seed-shop-rule.ps1. The RuleForge refresh it
-# attempts will fail harmlessly (RuleForge isn't up) but the dfdb env binding is
-# written, which is what RuleForge reads at boot.
+# We need a bearer token to call /rules. User auth lives in Keycloak behind
+# /identity now, so seed a throwaway admin.all ab_ API key directly in dfdb and
+# use it for seed-shop-rule.ps1. The RuleForge refresh it attempts will fail
+# harmlessly (RuleForge isn't up) but the dfdb env binding is written, which is
+# what RuleForge reads at boot.
 Write-Step "Publishing shop-bundles rule to env 'dev' (before RuleForge boot)"
 try {
     $co   = [guid]::NewGuid().ToString()
     $slug = "stackboot-" + $co.Substring(0, 8)
-    $roleId = [guid]::NewGuid().ToString()
-    $permId = [guid]::NewGuid().ToString()
 
     $dfHeaders = @{ "Content-Type" = "application/json" }
-    Invoke-RestMethod -Method Post -Uri "$DfdbUrl/collections/permissions" -Headers $dfHeaders -Body (@{ Id=$permId; Code="admin.all"; Name="All"; Status="Active" } | ConvertTo-Json) | Out-Null
-    Invoke-RestMethod -Method Post -Uri "$DfdbUrl/collections/roles" -Headers $dfHeaders -Body (@{ Id=$roleId; CompanyId=$co; Code="ADMIN"; Name="Administrator"; Status="Active"; PermissionIds=@($permId) } | ConvertTo-Json) | Out-Null
     Invoke-RestMethod -Method Post -Uri "$DfdbUrl/collections/companies" -Headers $dfHeaders -Body (@{ Id=$co; Name="Stack Boot"; Slug=$slug; Status="Active" } | ConvertTo-Json) | Out-Null
-    $email = "boot@$slug.local"
-    Invoke-RestMethod -Method Post -Uri "$DfdbUrl/collections/users" -Headers $dfHeaders -Body (@{ Id=[guid]::NewGuid().ToString(); Email=$email; Name="Boot Admin"; Status="Active"; RoleId=$roleId; CompanyId=$co } | ConvertTo-Json) | Out-Null
 
-    $auth = Invoke-RestMethod -Method Post -Uri "$AeroBusUrl/admin/users/$slug/authenticate" -Headers $dfHeaders -Body (@{ Email=$email; Password="x" } | ConvertTo-Json)
-    $token = $auth.accessToken
+    $prefix = ($co -replace "[^a-z0-9]", "").Substring(0, 8)
+    $secret = New-Object byte[] 32
+    (New-Object System.Security.Cryptography.RNGCryptoServiceProvider).GetBytes($secret)
+    $hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash($secret)
+    $token = "ab_" + $prefix + "_" + [Convert]::ToBase64String($secret).TrimEnd("=").Replace("+", "-").Replace("/", "_")
+    Invoke-RestMethod -Method Post -Uri "$DfdbUrl/collections/apitokens" -Headers $dfHeaders -Body (@{ Id=[guid]::NewGuid().ToString(); CompanyId=$co; Name="stackboot-key"; Prefix=$prefix; Hash=[Convert]::ToBase64String($hash); Scopes="admin.all"; Created=(Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json) | Out-Null
 
     & (Join-Path $ScriptDir "seed-shop-rule.ps1") -Token $token -AeroBusUrl $AeroBusUrl -Env "dev"
     Write-Ok "rule published to dev (dfdb binding written)"

@@ -100,17 +100,23 @@ the ooms admin/order services so existing UIs can repoint here (see
 | Group | Routes | Auth |
 | --- | --- | --- |
 | Diagnostics | `GET /health`, `GET /health/documentforge`, `GET /version` | open |
-| Admin | `/admin/companies`, `/admin/companies/config`, `/admin/roles`, `/admin/roles/permissions`, `/admin/permissions`, `/admin/users`, `/admin/workspaces`, `/admin/api-tokens` | Bearer (login is `POST /admin/users/{companySlug}/authenticate`, anonymous) |
-| Catalogue | `/catalogue/{continents,countries,regions,airports,market-zones,equipment,layouts,schedules,flights,connection-rules,flight-builder,bundles,products,stockkeeper}` | Bearer |
-| Customer | `/customer` | Bearer |
-| Offer | `/offer/shop`, `/offer/price` | Bearer |
-| Order | `/order/create`, `/order/retrieve`, `/order/change` | Bearer |
-| Rules | `/rules/*`, `/rules/reference-sets/*`, `/rules/environments/*` | Bearer |
-| Events | `/events`, `/events/stream`, `/events/subscriptions` | Bearer |
+| Identity | `/identity/me`, `/identity/users`, `/identity/roles`, `/identity/permissions`, `/identity/agents`, `/identity/organizations` (+ anonymous `POST /identity/onboarding`) | Bearer + `identity.*` / `role.*` / `agent.*` perms |
+| Admin | `/admin/companies`, `/admin/companies/config`, `/admin/workspaces` | Bearer |
+| Catalogue | `/catalogue/{continents,countries,regions,airports,market-zones,equipment,layouts,schedules,flights,connection-rules,flight-builder,bundles,products,stockkeeper}` | Bearer + `catalogue.view` |
+| Customer | `/customer` | Bearer + `customers.view` |
+| Offer | `/offer/shop`, `/offer/price` | Bearer + `offers.view` |
+| Order | `/order/create`, `/order/retrieve`, `/order/change` | Bearer + `orders.view` |
+| Rules | `/rules/*`, `/rules/reference-sets/*`, `/rules/environments/*` | Bearer + `rules.view` |
+| Events | `/events`, `/events/stream`, `/events/subscriptions` | Bearer + `events.view` |
 
-Two credentials work everywhere `[Authorize]` applies: a **user JWT** (from the
-authenticate endpoint) or an **`ab_` API key** (from `/admin/api-tokens`). The
-`Authorization: Bearer <token>` scheme routes on the token prefix.
+Two credentials work everywhere `[Authorize]` applies: a **Keycloak user token**
+(OIDC — the aerostudio login; realm roles + custom org roles expand into `perm`
+claims) or an **`ab_` API key** (a programmatic agent from `/identity/agents`).
+The `Authorization: Bearer <token>` scheme routes on the token prefix. The
+permission catalog lives in
+[`PermissionCatalog.cs`](src/AeroBus.Core/Security/PermissionCatalog.cs); the
+ooms-era user/role/permission/api-token admin routes (and the HS256
+authenticate flow) were removed in favour of `/identity`.
 
 ## Event catalog
 

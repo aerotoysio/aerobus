@@ -2,6 +2,7 @@ using AeroBus.Api.Bootstrap;
 using AeroBus.Core.Common.Cache;
 using AeroBus.Core.Data;
 using AeroBus.Core.Events;
+using AeroBus.Core.Identity;
 using AeroBus.Core.Repositories.Admin;
 using AeroBus.Core.Repositories.Catalogue;
 using AeroBus.Core.Repositories.Customer;
@@ -18,10 +19,16 @@ var builder = WebApplication.CreateBuilder(args);
 // swapped in behind that seam without touching the domain.
 builder.Services.AddDocumentForge(builder.Configuration);
 
-// Security: JWT-or-ApiKey authentication, permission-claim authorization,
-// tenant context. Jwt settings come from the "Jwt" section (JWT_KEY env
-// fallback for the signing key).
+// Security: Keycloak-or-ApiKey authentication, permission-claim
+// authorization, tenant context. Keycloak (the "Keycloak" section) is the
+// identity source for interactive users; ab_ API keys cover programmatic
+// agents. The legacy self-issued HS256 JWT path was removed.
 builder.Services.AddSecurity(builder.Configuration);
+
+// Identity: Keycloak-backed users/roles/organisations management behind
+// /identity — the aerostudio admin UI path. Multi-tenant: one Keycloak
+// organization per airline client.
+builder.Services.AddIdentity(builder.Configuration);
 
 // Admin (control plane): companies, users, roles, permissions, workspaces,
 // company configs, API tokens.

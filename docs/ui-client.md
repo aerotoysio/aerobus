@@ -1,5 +1,13 @@
 # Point an admin UI at AeroBus
 
+> **OBSOLETE (2026-07-13).** The legacy ooms admin UI can no longer repoint at
+> AeroBus: the `/admin/users` (incl. `authenticate`), `/admin/roles`,
+> `/admin/permissions` and `/admin/api-tokens` routes this recipe depends on were
+> removed when user management moved to Keycloak behind `/identity`. The admin UI
+> is now **aerostudio** (`C:\data\aerostudio`), which signs in via Keycloak
+> (aeroauth repo) and manages users/roles/permissions/agents through
+> `/identity/*`. Kept for the catalogue/order route-shape notes only.
+
 AeroBus deliberately preserved the ooms admin/order/offer route shapes, so an
 existing Next.js admin UI can be repointed at it with **one config change** and no
 code edits. This is the recipe.

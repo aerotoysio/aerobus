@@ -180,22 +180,26 @@ try {
 } catch { Fail "GET /version -> 200" $_.Exception.Message }
 
 # ============================================================================
-# STEP 2 - Seed company + permission(admin.all) + role + admin user (direct dfdb)
+# STEP 2 - Seed company + admin.all ab_ API key (direct dfdb)
+# User management lives in Keycloak behind /identity now; the smoke stack runs
+# without Keycloak, so it authenticates with an agent-style API key instead of
+# the removed HS256 /admin/users authenticate flow.
 # ============================================================================
-Info "`n[2] Seed tenant (fresh company via direct DocumentForge inserts)"
+Info "`n[2] Seed tenant (fresh company + ab_ admin key via direct DocumentForge inserts)"
 $companyId = [guid]::NewGuid().ToString()
 $slug      = "smoke-" + $companyId.Substring(0, 8)
-$roleId    = [guid]::NewGuid().ToString()
-$permId    = [guid]::NewGuid().ToString()
-$adminEmail = "admin@$slug.local"
 $state.CompanyId = $companyId
 $state.Slug = $slug
+
+$abPrefix = ($companyId -replace "[^a-z0-9]", "").Substring(0, 8)
+$abSecret = New-Object byte[] 32
+(New-Object System.Security.Cryptography.RNGCryptoServiceProvider).GetBytes($abSecret)
+$abHash   = [System.Security.Cryptography.SHA256]::Create().ComputeHash($abSecret)
+$abKey    = "ab_" + $abPrefix + "_" + [Convert]::ToBase64String($abSecret).TrimEnd("=").Replace("+", "-").Replace("/", "_")
 try {
-    Df-Insert "permissions" @{ Id = $permId; CompanyId = $companyId; Code = "admin.all"; Name = "All Access"; Status = "Active" } | Out-Null
-    Df-Insert "roles" @{ Id = $roleId; CompanyId = $companyId; Code = "ADMIN"; Name = "Administrator"; Status = "Active"; PermissionIds = @($permId) } | Out-Null
     Df-Insert "companies" @{ Id = $companyId; Name = "Smoke Airlines"; Slug = $slug; Status = "Active"; OperatingCurrency = "AED"; DefaultExpectedLoadFactor = 0.8 } | Out-Null
-    Df-Insert "users" @{ Id = [guid]::NewGuid().ToString(); Email = $adminEmail; Name = "Smoke Admin"; Status = "Active"; RoleId = $roleId; CompanyId = $companyId } | Out-Null
-    Pass "Seeded company/permission/role/user" "slug=$slug"
+    Df-Insert "apitokens" @{ Id = [guid]::NewGuid().ToString(); CompanyId = $companyId; Name = "smoke-admin-key"; Prefix = $abPrefix; Hash = [Convert]::ToBase64String($abHash); Scopes = "admin.all"; Created = (Get-Date).ToUniversalTime().ToString("o") } | Out-Null
+    Pass "Seeded company + admin.all ab_ key" "slug=$slug prefix=$abPrefix"
 } catch {
     Fail "Seed tenant" $_.Exception.Message
     Info "`nCannot continue without a seeded tenant. Is dfdb reachable at $DfdbUrl?"
@@ -204,44 +208,19 @@ try {
 }
 
 # ============================================================================
-# STEP 3 - Authenticate (JWT) + RBAC 401 without token / 200 with token
+# STEP 3 - Auth: 401 without a token, 200 + admin.all with the seeded ab_ key
 # ============================================================================
-Info "`n[3] Admin auth + RBAC"
-$jwt = $null
-try {
-    $auth = Invoke-Json -Method Post -Uri "$AeroBusUrl/admin/users/$slug/authenticate" -Body @{ Email = $adminEmail; Password = "anything" }
-    $jwt = $auth.accessToken
-    Assert ([bool]$jwt) "POST /admin/users/$slug/authenticate -> JWT" | Out-Null
-    $state.Jwt = $jwt
-} catch { Fail "authenticate -> JWT" $_.Exception.Message }
+Info "`n[3] Auth (ab_ key) + RBAC"
 
 # WITHOUT token = 401
-$r = Try-Http -Method Get -Uri "$AeroBusUrl/admin/users/company/$companyId"
-Assert ($r.Status -eq 401) "GET /admin/users/company/{co} WITHOUT token -> 401" "status=$($r.Status)" | Out-Null
+$r = Try-Http -Method Get -Uri "$AeroBusUrl/identity/me"
+Assert ($r.Status -eq 401) "GET /identity/me WITHOUT token -> 401" "status=$($r.Status)" | Out-Null
 
-# WITH token = 200
-if ($jwt) {
-    $r = Try-Http -Method Get -Uri "$AeroBusUrl/admin/users/company/$companyId" -Headers @{ Authorization = "Bearer $jwt" }
-    Assert ($r.Status -eq 200) "GET /admin/users/company/{co} WITH token -> 200" "status=$($r.Status)" | Out-Null
-}
-$authHeader = @{ Authorization = "Bearer $jwt" }
+# WITH the seeded ab_ key = 200
+$r = Try-Http -Method Get -Uri "$AeroBusUrl/identity/me" -Headers @{ Authorization = "Bearer $abKey" }
+Assert ($r.Status -eq 200) "GET /identity/me WITH ab_ key -> 200" "status=$($r.Status)" | Out-Null
 
-# ============================================================================
-# STEP 4 - Mint an ab_ API token and prove it authenticates
-# ============================================================================
-Info "`n[4] ab_ API token"
-$abKey = $null
-try {
-    $tok = Invoke-Json -Method Post -Uri "$AeroBusUrl/admin/api-tokens" -Headers $authHeader -Body @{ Name = "smoke-token"; Scopes = "admin.all" }
-    $abKey = $tok.Plaintext
-    $ok = ([bool]$abKey) -and ($abKey.StartsWith("ab_"))
-    Assert $ok "POST /admin/api-tokens -> ab_ key" "prefix=$($tok.Prefix)" | Out-Null
-} catch { Fail "POST /admin/api-tokens" $_.Exception.Message }
-
-if ($abKey) {
-    $r = Try-Http -Method Get -Uri "$AeroBusUrl/admin/users/company/$companyId" -Headers @{ Authorization = "Bearer $abKey" }
-    Assert ($r.Status -eq 200) "ab_ key authenticates a GET -> 200" "status=$($r.Status)" | Out-Null
-}
+$authHeader = @{ Authorization = "Bearer $abKey" }
 
 # Helper to POST a catalogue /save (all catalogue creates take CompanyId in body)
 function Cat-Save([string]$resource, $doc) {

@@ -7,8 +7,10 @@ namespace AeroBus.Core.Repositories.Admin
     {
         /// <summary>
         /// Registers the control-plane (admin) repositories and services:
-        /// companies, company configs, users, roles, permissions, workspaces
-        /// and API tokens. Auth wiring lives in <c>AddSecurity</c>.
+        /// companies, company configs, workspaces and API tokens (the store
+        /// behind /identity/agents and the ab_ authentication handler).
+        /// Users/roles/permissions management lives in the Keycloak-backed
+        /// /identity module — the legacy ooms user stack was removed.
         /// </summary>
         public static IServiceCollection AddAdmin(this IServiceCollection services)
         {
@@ -20,18 +22,6 @@ namespace AeroBus.Core.Repositories.Admin
 
             services.AddScoped<ICompanyConfigs, CompanyConfigs>();
             services.AddScoped<CompanyConfigService>();
-
-            services.AddScoped<IPermissions, Permissions>();
-            services.AddScoped<PermissionService>();
-
-            services.AddScoped<IRolePermissions, RolePermissions>();
-            services.AddScoped<RolePermissionsService>();
-
-            services.AddScoped<IRoles, Roles>();
-            services.AddScoped<RoleService>();
-
-            services.AddScoped<IUsers, Users>();
-            services.AddScoped<UserService>();
 
             services.AddScoped<IWorkspaces, Workspaces>();
             services.AddScoped<WorkspaceService>();

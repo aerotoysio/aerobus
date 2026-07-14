@@ -1,8 +1,5 @@
-using System.Text;
-using AeroBus.Core.Model.Admin;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using AeroBus.Core.Identity;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -12,34 +9,29 @@ namespace AeroBus.Core.Security
     public static class ServiceCollectionExtensions
     {
         /// <summary>
-        /// Authentication + authorization wiring: JWT-or-ApiKey policy scheme,
-        /// permission-claim policies, password hashing, token issuance and
-        /// tenant-context plumbing. Jwt settings come from the "Jwt"
-        /// configuration section (Issuer, Audience, Key) with a JWT_KEY
-        /// environment-variable fallback for the signing key.
+        /// Authentication + authorization wiring. Two credential types:
+        /// Keycloak-issued user tokens (OIDC, the aerostudio path — configured
+        /// via the "Keycloak" section) and ab_ API keys (programmatic agents,
+        /// managed through /identity/agents). Permission-claim policies and
+        /// tenant-context plumbing apply to both. The legacy self-issued HS256
+        /// JWT path (ooms /admin/users authenticate) has been removed —
+        /// Keycloak is the only interactive identity source.
         /// </summary>
         public static IServiceCollection AddSecurity(this IServiceCollection services, IConfiguration config)
         {
-            var jwtSection = config.GetSection("Jwt");
-            var jwtIssuer = jwtSection["Issuer"];
-            var jwtAudience = jwtSection["Audience"];
-            var jwtKey = jwtSection["Key"];
-            if (string.IsNullOrWhiteSpace(jwtKey))
-                jwtKey = System.Environment.GetEnvironmentVariable("JWT_KEY");
-            if (string.IsNullOrWhiteSpace(jwtKey))
-                throw new InvalidOperationException("JWT signing key is not configured — set Jwt:Key or the JWT_KEY environment variable.");
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var keycloak = new KeycloakOptions();
+            config.GetSection(KeycloakOptions.SectionName).Bind(keycloak);
 
             // The default scheme is a policy scheme that inspects the bearer
-            // token format and forwards to JWT or ApiKey accordingly. This lets
-            // [Authorize] endpoints accept either credential without per-route
-            // configuration.
-            const string DefaultScheme = "JwtOrApiKey";
+            // token format: ab_ keys go to the ApiKey handler, everything else
+            // to Keycloak. With Keycloak unconfigured (e.g. a channel-only
+            // deployment) non-ab_ bearers fall to the ApiKey handler, which
+            // rejects them cleanly with a 401.
+            const string DefaultScheme = "KeycloakOrApiKey";
 
-            services
+            var auth = services
                 .AddAuthentication(DefaultScheme)
-                .AddPolicyScheme(DefaultScheme, "JWT user-session or ApiKey", options =>
+                .AddPolicyScheme(DefaultScheme, "Keycloak user-session or ApiKey", options =>
                 {
                     options.ForwardDefaultSelector = ctx =>
                     {
@@ -51,32 +43,37 @@ namespace AeroBus.Core.Security
                             if (token.StartsWith("ab_", StringComparison.Ordinal))
                                 return ApiKeyAuthenticationHandler.SchemeName;
                         }
-                        return JwtBearerDefaults.AuthenticationScheme;
-                    };
-                })
-                .AddJwtBearer(options =>
-                {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidIssuer = jwtIssuer,
-                        ValidAudience = jwtAudience,
-                        IssuerSigningKey = key,
-                        ClockSkew = TimeSpan.FromMinutes(1) // tighten for tests
+                        return keycloak.Enabled ? KeycloakOptions.Scheme : ApiKeyAuthenticationHandler.SchemeName;
                     };
                 })
                 .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
                     ApiKeyAuthenticationHandler.SchemeName, _ => { });
 
-            services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+            if (keycloak.Enabled)
+            {
+                auth.AddJwtBearer(KeycloakOptions.Scheme, options =>
+                {
+                    // Signing keys come from the realm's JWKS endpoint via discovery.
+                    options.Authority = keycloak.Authority;
+                    options.RequireHttpsMetadata = keycloak.Authority.StartsWith("https", StringComparison.OrdinalIgnoreCase);
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidIssuer = keycloak.Authority,
+                        ValidAudience = keycloak.Audience,
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.FromMinutes(1)
+                    };
+                    // Realm roles -> perm claims, custom org roles, organization -> companyId.
+                    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+                    {
+                        OnTokenValidated = KeycloakClaimsTransformer.TransformAsync
+                    };
+                });
+            }
+
             services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
             services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
             services.AddAuthorization(); // keep this too
-
-            services.AddSingleton(new Services.Security.TokenService(jwtIssuer!, jwtAudience!, key));
 
             // Tenant context plumbing — resolved from the authenticated principal;
             // consumed by tenant-aware reads (see ITenantContext).
