@@ -42,14 +42,24 @@ vertical, an endpoint group, and a permission resource are the same concept.
 | `orders` | `orders.view` / `orders.manage` | Order lifecycle | `/order/*` |
 | `customers` | `customers.view` / `customers.manage` | Customer aggregate | `/customer/*` |
 | `catalogue` | `catalogue.view` / `catalogue.manage` | Reference data, fleet, schedules/flights, products/bundles/stock | `/catalogue/*` |
+| `operations` | `operations.view` / `operations.manage` | Departure control (DCS): departures board, flight status lifecycle, passenger manifest, check-in, boarding | `/operations/*` |
 | `rules` | `rules.view` / `rules.manage` | Business-rules authoring (RuleForge proxy) | `/rules/*` |
+| `policystudio` | `policystudio.view` / `policystudio.manage` | Policy Studio authoring (policies, schemas, data refs, tests, releases) — compiles to RuleForge rules | `/policy-studio/*` |
 | `events` | `events.view` / `events.manage` | Outbox audit, SSE stream, webhook subscriptions | `/events/*` |
+
+`policystudio` is **platform-level**: its content is global (not per-company), so
+the built-in `org-admin`/`editor`/`viewer` roles are **not** granted it — only
+`platform-admin` (via `admin.all`) reaches it out of the box. A tenant can
+delegate authoring by putting `policystudio.manage` in a custom org role.
 
 Current group-level enforcement (see `AppEndpoints.cs`): `/offer`→`offers.view`,
 `/order`→`orders.view`, `/customer`→`customers.view`, `/catalogue/*`→`catalogue.view`,
-`/rules`→`rules.view`, `/events`→`events.view`, plus per-route policies across
-`/identity`. Write-vs-read (`.manage`) enforcement inside the domain groups is a
-planned refinement — today a group's `view` permission admits all its routes.
+`/rules`→`rules.view`, `/policy-studio`→`policystudio.view`,
+`/operations`→`operations.view`, `/events`→`events.view`, plus per-route policies
+across `/identity`. Write-vs-read (`.manage`) enforcement inside the domain groups
+is a planned refinement — today most groups' `view` permission admits all their
+routes; `/policy-studio` and `/operations` are the exceptions, already enforcing
+their `.manage` permission on every write route.
 
 ## How principals get permissions
 
@@ -61,8 +71,8 @@ claims at token validation (`KeycloakClaimsTransformer`):
    | Role | Grants |
    | --- | --- |
    | `platform-admin` | `admin.all` (aerotoys staff — everything, every org) |
-   | `org-admin` | `dashboard.view` + `.all` on: org, identity, role, agent, offers, ibe, ancillary, orders, customers, catalogue, rules, events |
-   | `editor` | `dashboard.view`, `offers.all`, `ibe.all`, `ancillary.all`, `catalogue.view`, `orders.view`, `customers.view`, `rules.view` |
+   | `org-admin` | `dashboard.view` + `.all` on: org, identity, role, agent, offers, ibe, ancillary, orders, customers, catalogue, operations, rules, events |
+   | `editor` | `dashboard.view`, `offers.all`, `ibe.all`, `ancillary.all`, `catalogue.view`, `orders.view`, `customers.view`, `operations.view`, `operations.manage`, `rules.view` |
    | `viewer` | `dashboard.view` + `view` on offers, ibe, ancillary, catalogue, orders, customers |
 
 2. *Custom org roles* — tenant-defined bundles of catalog codes, created on the

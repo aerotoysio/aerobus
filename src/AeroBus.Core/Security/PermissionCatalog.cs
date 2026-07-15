@@ -32,7 +32,9 @@ namespace AeroBus.Core.Security
             .. Pair("orders", "orders"),
             .. Pair("customers", "customers"),
             .. Pair("catalogue", "catalogue data (flights, products, bundles)"),
+            .. Pair("operations", "flight operations & departure control (DCS): status, manifest, check-in, boarding"),
             .. Pair("rules", "business rules"),
+            .. Pair("policystudio", "Policy Studio (policies, schemas, tests, releases)"),
             .. Pair("events", "events and webhook subscriptions"),
         ];
 

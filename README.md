@@ -106,7 +106,9 @@ the ooms admin/order services so existing UIs can repoint here (see
 | Customer | `/customer` | Bearer + `customers.view` |
 | Offer | `/offer/shop`, `/offer/price` | Bearer + `offers.view` |
 | Order | `/order/create`, `/order/retrieve`, `/order/change` | Bearer + `orders.view` |
+| Operations (DCS) | `/operations/departures`, `/operations/flights/{id}` (`/manifest`, `/status`, `/depart`, `/board-all`), `/operations/checkin`, `/operations/board` | Bearer + `operations.view` (writes: `operations.manage`) |
 | Rules | `/rules/*`, `/rules/reference-sets/*`, `/rules/environments/*` | Bearer + `rules.view` |
+| Policy Studio | `/policy-studio/{tree,spaces,folders,policies,schemas,datarefs,releases,settings}`, `/policy-studio/policies/{id}/{publish,compiled,tests,tests/run}` | Bearer + `policystudio.view` (writes: `policystudio.manage`) |
 | Events | `/events`, `/events/stream`, `/events/subscriptions` | Bearer + `events.view` |
 
 Two credentials work everywhere `[Authorize]` applies: a **Keycloak user token**
@@ -139,6 +141,11 @@ HMAC-SHA256 over the exact body) + the SSE stream. Type filters support exact
 | `product.changed` | A product is saved. |
 | `bundle.changed` | A bundle is saved. |
 | `rule.published` | A rule is published to an environment (global, no company scope). |
+| `policy.published` | A Policy Studio policy is published — compiled + released to the engine (global, no company scope). |
+| `flight.status-changed` | A flight's operational status advances (e.g. Scheduled→Boarding). |
+| `flight.departed` | A flight is departed (Boarding→Departed). |
+| `checkin.completed` | A passenger is checked in for a flight. |
+| `passenger.boarded` | A passenger is boarded (carries boarding sequence + seat). |
 
 Consume them three ways: **webhooks** (`POST /events/subscriptions` with a
 `types[]` filter + optional `secret`), the **SSE stream**
