@@ -1,5 +1,6 @@
 using AeroBus.Core.Data;
 using AeroBus.Core.Model.Admin;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AeroBus.Core.Repositories.Admin
 {
@@ -36,7 +37,9 @@ namespace AeroBus.Core.Repositories.Admin
         Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
     }
 
-    public sealed class ApiTokens(IDocumentStore store) : DocumentRepository<ApiToken>(store), IApiTokens
+    public sealed class ApiTokens(
+        [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store)
+        : DocumentRepository<ApiToken>(store), IApiTokens
     {
         protected override string Collection => "apitokens";
 

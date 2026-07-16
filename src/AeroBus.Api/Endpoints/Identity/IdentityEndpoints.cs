@@ -231,9 +231,11 @@ namespace AeroBus.Api.Endpoints.Identity
         /// <summary>Anonymous tenant self-onboarding (login-page flow). Mounted without authorization.</summary>
         public static Task<IResult> OnboardAsync(
             [FromBody] OnboardRequest req,
-            [FromServices] IdentityService svc,
+            [FromServices] AeroBus.Core.Services.Admin.ProvisioningService provisioning,
             CancellationToken ct) =>
-            Run(async () => Results.Created("/identity/onboarding", await svc.OnboardAsync(req, ct)));
+            // Full SaaS provisioning: Keycloak org + admin, then the org's own
+            // DocumentForge database (created + seeded). Anonymous today — gate before prod.
+            Run(async () => Results.Created("/identity/onboarding", await provisioning.ProvisionAsync(req, ct)));
 
         /// <summary>Maps service failures onto HTTP results so handlers stay expression-bodied.</summary>
         private static async Task<IResult> Run(Func<Task<IResult>> action)

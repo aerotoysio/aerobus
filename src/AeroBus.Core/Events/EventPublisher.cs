@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AeroBus.Core.Data;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace AeroBus.Core.Events
@@ -71,7 +72,10 @@ namespace AeroBus.Core.Events
         private readonly IDocumentStore _store;
         private readonly ILogger<EventPublisher> _log;
 
-        public EventPublisher(IDocumentForgeClient df, IDocumentStore store, ILogger<EventPublisher> log)
+        public EventPublisher(
+            [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentForgeClient df,
+            [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store,
+            ILogger<EventPublisher> log)
         {
             _df = df;
             _store = store;

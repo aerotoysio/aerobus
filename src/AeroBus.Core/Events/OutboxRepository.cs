@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using AeroBus.Core.Data;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AeroBus.Core.Events
 {
@@ -40,7 +41,9 @@ namespace AeroBus.Core.Events
         Task<bool> TryClaimAsync(OutboxEvent row, CancellationToken ct = default);
     }
 
-    public sealed class Outbox(IDocumentStore store, IDocumentForgeClient df)
+    public sealed class Outbox(
+        [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store,
+        [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentForgeClient df)
         : DocumentRepository<OutboxEvent>(store), IOutbox
     {
         private readonly IDocumentForgeClient _df = df;

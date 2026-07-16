@@ -1,5 +1,6 @@
 using AeroBus.Core.Data;
 using AeroBus.Core.Model.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AeroBus.Core.Repositories.Identity
 {
@@ -11,7 +12,9 @@ namespace AeroBus.Core.Repositories.Identity
         Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
     }
 
-    public sealed class OrgRoles(IDocumentStore store) : DocumentRepository<OrgRole>(store), IOrgRoles
+    public sealed class OrgRoles(
+        [FromKeyedServices(ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store)
+        : DocumentRepository<OrgRole>(store), IOrgRoles
     {
         protected override string Collection => "orgroles";
     }
@@ -25,7 +28,8 @@ namespace AeroBus.Core.Repositories.Identity
         Task<bool> DeleteAsync(Guid userId, CancellationToken ct = default);
     }
 
-    public sealed class OrgRoleAssignments(IDocumentStore store)
+    public sealed class OrgRoleAssignments(
+        [FromKeyedServices(ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store)
         : DocumentRepository<OrgRoleAssignment>(store), IOrgRoleAssignments
     {
         protected override string Collection => "orgroleassignments";
@@ -41,7 +45,8 @@ namespace AeroBus.Core.Repositories.Identity
         Task<UserProfileDoc?> SaveAsync(UserProfileDoc model, CancellationToken ct = default);
     }
 
-    public sealed class UserProfiles(IDocumentStore store)
+    public sealed class UserProfiles(
+        [FromKeyedServices(ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store)
         : DocumentRepository<UserProfileDoc>(store), IUserProfiles
     {
         protected override string Collection => "userprofiles";

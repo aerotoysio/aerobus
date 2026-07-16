@@ -105,13 +105,22 @@ namespace AeroBus.Core.Model.Identity
         string? Name,
         Dictionary<string, string>? Settings);
 
-    /// <summary>Self-service tenant creation from the login page (dev flow; will be gated later).</summary>
+    /// <summary>Self-service tenant creation from the login page (dev flow; will be gated later).
+    /// The SaaS fields (ShortName onward) drive DocumentForge provisioning: the org gets its
+    /// own database named by ShortName, seeded with a Company doc + reference starter pack.</summary>
     public sealed record OnboardRequest(
         string OrganizationName,
         string AdminEmail,
         string? AdminFirstName,
         string? AdminLastName,
-        string Password);
+        string Password,
+        string? ShortName = null,
+        string? Designator = null,
+        string? AccountingCode = null,
+        string? OperatingCurrency = null,
+        string? Timezone = null,
+        string? Plan = null);
 
-    public sealed record OnboardResult(OrganizationInfo Organization, string AdminUserId);
+    /// <summary>Onboarding outcome: the Keycloak org + admin, plus the provisioned tenant database.</summary>
+    public sealed record OnboardResult(OrganizationInfo Organization, string AdminUserId, string? Database = null);
 }
