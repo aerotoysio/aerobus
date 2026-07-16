@@ -45,6 +45,11 @@ namespace AeroBus.Core.Data
     {
         Task<DocumentForgeHealth> HealthAsync(CancellationToken ct = default);
 
+        /// <summary>POST /databases {name, createIfMissing:true}. Idempotent —
+        /// an already-attached database is success. Server-level (not db-scoped);
+        /// used by tenant provisioning to create an org's database. False on failure.</summary>
+        Task<bool> EnsureDatabaseAsync(string database, CancellationToken ct = default);
+
         /// <summary>POST /collections/{collection}. Returns the new internal _id, or null on failure.</summary>
         Task<string?> InsertAsync(string collection, string json, CancellationToken ct = default);
 
@@ -83,19 +88,28 @@ namespace AeroBus.Core.Data
         };
 
         private readonly HttpClient _http;
-        private readonly string? _database;
+        // Resolved PER CALL so the same client can route to a different database
+        // each request — the tenant registration supplies a provider that reads the
+        // caller's org database; keyed (rules/control) registrations supply a fixed
+        // value. Returning null/empty targets the server's default database.
+        private readonly Func<string?> _databaseProvider;
 
         public DocumentForgeClient(HttpClient http, IOptions<DocumentForgeOptions> options)
             : this(http, options.Value, options.Value.Database) { }
 
-        /// <summary>Explicit-database constructor (null = the server's default
-        /// database over the flat routes) — used by the keyed rules-client
-        /// registration, which must stay on the default database. Internal so
-        /// typed-HttpClient DI activation sees exactly one public constructor.</summary>
+        /// <summary>Fixed-database constructor (null = the server's default database
+        /// over the flat routes) — used by the keyed rules/control clients and the
+        /// provisioning store factory, which target one specific database.</summary>
         internal DocumentForgeClient(HttpClient http, DocumentForgeOptions opts, string? database)
+            : this(http, opts, () => database) { }
+
+        /// <summary>Per-request database constructor — the provider is consulted on
+        /// every data-plane call. The main (tenant-routed) client uses this with a
+        /// provider that reads <c>ITenantDatabase.CurrentDatabase</c>.</summary>
+        internal DocumentForgeClient(HttpClient http, DocumentForgeOptions opts, Func<string?> databaseProvider)
         {
             _http = http;
-            _database = string.IsNullOrWhiteSpace(database) ? null : database;
+            _databaseProvider = databaseProvider;
             _http.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
             if (!string.IsNullOrWhiteSpace(opts.ApiKey))
                 _http.DefaultRequestHeaders.Authorization =
@@ -107,8 +121,24 @@ namespace AeroBus.Core.Data
         /// <c>/db/{name}/…</c> surface is used (the flat routes always hit the
         /// server's default database — X-Database is not honoured on writes).
         /// </summary>
-        private string DataUrl(string relative) =>
-            _database is null ? relative : $"db/{Uri.EscapeDataString(_database)}/{relative}";
+        private string DataUrl(string relative)
+        {
+            var database = _databaseProvider();
+            return string.IsNullOrWhiteSpace(database) ? relative : $"db/{Uri.EscapeDataString(database)}/{relative}";
+        }
+
+        public async Task<bool> EnsureDatabaseAsync(string database, CancellationToken ct = default)
+        {
+            // Server-level route (NOT db-scoped): create the database if missing.
+            var body = JsonSerializer.Serialize(new { name = database, createIfMissing = true }, Json);
+            using var resp = await _http.PostAsync("databases", new StringContent(body, Encoding.UTF8, "application/json"), ct);
+            if (resp.IsSuccessStatusCode) return true;
+
+            // Tolerate "already attached/exists" as success (idempotent).
+            var text = await resp.Content.ReadAsStringAsync(ct);
+            return text.Contains("already", StringComparison.OrdinalIgnoreCase)
+                   || text.Contains("exists", StringComparison.OrdinalIgnoreCase);
+        }
 
         public async Task<DocumentForgeHealth> HealthAsync(CancellationToken ct = default)
         {
@@ -139,7 +169,7 @@ namespace AeroBus.Core.Data
         {
             // The scoped surface has no by-field routes; a SELECT is equivalent
             // (and honours indexes the same way the flat by-field route does).
-            if (_database is not null)
+            if (!string.IsNullOrWhiteSpace(_databaseProvider()))
             {
                 var rows = await QueryAsync(
                     $"SELECT * FROM {collection} WHERE {field} = '{Escape(value)}' LIMIT 1", ct);
@@ -157,7 +187,7 @@ namespace AeroBus.Core.Data
 
         public async Task<bool> ReplaceByFieldAsync(string collection, string field, string value, string json, CancellationToken ct = default)
         {
-            if (_database is not null)
+            if (!string.IsNullOrWhiteSpace(_databaseProvider()))
             {
                 // Resolve the internal _id, then PUT the scoped by-id route.
                 var existing = await GetByFieldAsync(collection, field, value, ct);
@@ -182,7 +212,7 @@ namespace AeroBus.Core.Data
 
         public async Task<bool> DeleteByFieldAsync(string collection, string field, string value, CancellationToken ct = default)
         {
-            if (_database is not null)
+            if (!string.IsNullOrWhiteSpace(_databaseProvider()))
             {
                 var affected = await ExecuteAsync(
                     $"DELETE FROM {collection} WHERE {field} = '{Escape(value)}'", ct);

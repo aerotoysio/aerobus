@@ -109,6 +109,11 @@ app.UseAuthorization();
 // return cross-company data. Must run after auth so the principal is set.
 app.UseTenantBypassForCrossCompany();
 
+// SaaS multi-tenancy: resolve the caller's org → its own DocumentForge database
+// and route this request's business reads/writes there. After auth (needs the
+// companyId claim); a no-op for anonymous callers and unprovisioned orgs.
+app.UseTenantDatabaseRouting();
+
 AeroBus.Api.Bootstrap.AppEndpoints.Configure(app);
 
 app.Run();

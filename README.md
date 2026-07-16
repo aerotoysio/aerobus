@@ -40,6 +40,36 @@ rules engine are the shared state.
 | **Rules** | File and publish rules + reference sets into RuleForge's DocumentForge collections, bind them to an environment, and refresh the engine. |
 | **Events** | A transactional outbox with a background dispatcher: signed webhooks, an SSE stream, and a queryable audit trail. |
 
+## Multi-tenancy (SaaS: database per organisation)
+
+Keycloak owns organisations + users; **each airline gets its own DocumentForge
+database**, named by a short code (`ek`, `emirates`), created and seeded when the
+org is onboarded.
+
+- **Onboarding** (`POST /identity/onboarding`) now provisions a tenant end-to-end:
+  Keycloak org + admin → create `db/{shortName}` → seed it (a `Company` settings
+  doc + a reference starter pack of airports/equipment) → register the org in the
+  control-plane `organisations` registry. Anonymous today — **gate before prod**
+  (it creates databases).
+- **Per-request routing**: `TenantDatabaseMiddleware` resolves the caller's
+  `companyId` → the org's `shortName` (from the registry, cached) and stamps
+  `ITenantDatabase`, so that request's business reads/writes go to the org's own
+  database. Unauthenticated/unprovisioned callers fall back to the configured
+  `DocumentForge:Database` (today's single-DB behaviour is preserved).
+- **What's per-tenant vs shared.** The airline's business data (companies,
+  catalogue, orders, customers, offers, stock, checkins) lives in its own database
+  — full physical separation. A small set of collections read *at auth-time or by
+  background jobs* stays in the **shared control database** because there's no
+  resolved tenant DB at that moment: the org registry, identity/RBAC
+  (`orgroles`/`orgroleassignments`/`userprofiles`), `apitokens`, the events outbox,
+  and rules. These still carry `companyId` for scoping. (RBAC/tokens are candidates
+  to move fully into Keycloak later.)
+
+Deferred follow-ons: per-org **rules** (RuleForge tenant-awareness) and **events**
+(a tenant-iterating dispatcher), a durable per-org **order-sequence counter**
+(order codes are already prefixed by the org's designator), migrating DF
+identity/security tables into Keycloak, and the aerostudio onboarding wizard UI.
+
 ## Quickstart
 
 ### Docker Compose (full stack)

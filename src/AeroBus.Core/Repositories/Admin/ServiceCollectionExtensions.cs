@@ -17,6 +17,11 @@ namespace AeroBus.Core.Repositories.Admin
             services.AddScoped<ICompanies, Companies>();
             services.AddScoped<CompanyService>();
 
+            // SaaS control plane: the tenant registry (org → its own database) + the
+            // provisioning service that creates and seeds a new org's database.
+            services.AddScoped<IOrganisations, Organisations>();
+            services.AddScoped<ProvisioningService>();
+
             services.AddScoped<IApiTokens, ApiTokens>();
             services.AddScoped<ApiTokenService>();
 
