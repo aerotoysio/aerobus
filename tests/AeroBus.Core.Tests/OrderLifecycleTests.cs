@@ -51,7 +51,11 @@ public class OrderLifecycleTests(DocumentForgeFixture fx)
 
     private OrderCreateService CreateService() =>
         new(new Companies(fx.Store), new Orders(fx.Store), new Offers(fx.Store),
-            Inventory(), Runner(), EventsTestHelpers.Publisher(fx), NullLogger<OrderCreateService>.Instance);
+            Inventory(), Runner(), EventsTestHelpers.Publisher(fx),
+            new AeroBus.Core.Services.Operations.ManifestBuilder(
+                new AeroBus.Core.Repositories.Operations.CheckIns(fx.Store),
+                NullLogger<AeroBus.Core.Services.Operations.ManifestBuilder>.Instance),
+            NullLogger<OrderCreateService>.Instance);
 
     private OrderChangeService ChangeService() =>
         new(new Orders(fx.Store), Inventory(), Runner(), EventsTestHelpers.Publisher(fx), NullLogger<OrderChangeService>.Instance);

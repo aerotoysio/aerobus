@@ -9,6 +9,8 @@ using AeroBus.Core.Repositories.Customer;
 using AeroBus.Core.Rules;
 using AeroBus.Core.Security;
 using AeroBus.Core.Services.Distribution;
+using AeroBus.Core.Services.Operations;
+using AeroBus.Core.Services.PolicyStudio;
 using AeroBus.Core.Services.Rules;
 using AeroBus.Core.Services.Stock;
 
@@ -60,8 +62,18 @@ builder.Services.AddStock();
 // (inventory decrement on create, release on cancel, RuleForge order decisions).
 builder.Services.AddOrders();
 
+// Operations (DCS): departure-control surface — flight status lifecycle, the
+// flight-keyed passenger manifest (indexed from orders at booking) and check-in /
+// boarding. Depends on catalogue (flights), stock (counters) and orders (roll-up).
+builder.Services.AddOperations();
+
 // Rules authoring proxy over RuleForge's DocumentForge collections.
 builder.Services.AddRulesAuthoring();
+
+// Policy Studio: the policy-authoring backend (spaces/folders/policies/schemas/
+// tests) with a statement→rule compiler and test runner. Publishing reuses the
+// rules-authoring release path above, so it must be registered after it.
+builder.Services.AddPolicyStudio();
 
 // Events backbone: transactional outbox publisher, the background dispatcher
 // (webhook fan-out with retry/backoff), and webhook-subscription repo. The

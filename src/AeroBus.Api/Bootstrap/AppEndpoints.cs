@@ -5,7 +5,9 @@ using AeroBus.Api.Endpoints.Diagnostics;
 using AeroBus.Api.Endpoints.Events;
 using AeroBus.Api.Endpoints.Identity;
 using AeroBus.Api.Endpoints.Offer;
+using AeroBus.Api.Endpoints.Operations;
 using AeroBus.Api.Endpoints.Order;
+using AeroBus.Api.Endpoints.PolicyStudio;
 using AeroBus.Api.Endpoints.Rules;
 using AeroBus.Core.Common;
 
@@ -81,8 +83,20 @@ namespace AeroBus.Api.Bootstrap
             // order-management service.
             app.MapGroup("/order").WithTags("Order").OrderMapping().RequireAuthorization("orders.view");
 
+            // Operations (DCS) — the check-in/gate workstation surface (aeroboard):
+            // a station's departures, flight status lifecycle, passenger manifest and
+            // per-passenger check-in / boarding. Reads need operations.view; every
+            // write needs operations.manage.
+            app.MapGroup("/operations").WithTags("Operations").OperationsMapping().RequireAuthorization("operations.view");
+
             // Rules authoring proxy over RuleForge's DocumentForge collections.
             app.MapGroup("/rules").WithTags("Rules").RulesMapping().RequireAuthorization("rules.view");
+
+            // Policy Studio — policy-authoring backend that compiles to RuleForge
+            // rules. Platform-level (global content): the group requires
+            // policystudio.view and every write policystudio.manage, permissions
+            // granted only to platform-admin (org roles may delegate them).
+            app.MapGroup("/policy-studio").WithTags("Policy Studio").PolicyStudioMapping().RequireAuthorization("policystudio.view");
 
             // Events backbone — outbox audit trail (/events), SSE stream
             // (/events/stream), and webhook subscription CRUD
