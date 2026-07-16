@@ -29,12 +29,13 @@ namespace AeroBus.Core.Identity
             [
                 "dashboard.view", "org.all", "identity.all", "role.all", "agent.all",
                 "offers.all", "ibe.all", "ancillary.all", "orders.all",
-                "customers.all", "catalogue.all", "rules.all", "events.all",
+                "customers.all", "catalogue.all", "operations.all", "rules.all", "events.all",
             ],
             ["editor"] =
             [
                 "dashboard.view", "offers.all", "ibe.all", "ancillary.all",
-                "catalogue.view", "orders.view", "customers.view", "rules.view",
+                "catalogue.view", "orders.view", "customers.view",
+                "operations.view", "operations.manage", "rules.view",
             ],
             ["viewer"] =
             [

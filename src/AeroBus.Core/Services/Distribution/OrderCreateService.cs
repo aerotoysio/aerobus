@@ -5,6 +5,7 @@ using AeroBus.Core.Repositories.Admin;
 using AeroBus.Core.Repositories.Distribution;
 using AeroBus.Core.Repositories.Order;
 using AeroBus.Core.Rules;
+using AeroBus.Core.Services.Operations;
 using AeroBus.Core.Services.Stock;
 using Microsoft.Extensions.Logging;
 using OrderModel = AeroBus.Core.Model.Order.Order;
@@ -36,6 +37,7 @@ namespace AeroBus.Core.Services.Distribution
         private readonly IInventoryService _inventory;
         private readonly DecisionRunner _decisions;
         private readonly IEventPublisher _events;
+        private readonly IManifestBuilder _manifest;
         private readonly ILogger<OrderCreateService> _log;
 
         public OrderCreateService(
@@ -45,6 +47,7 @@ namespace AeroBus.Core.Services.Distribution
             IInventoryService inventory,
             DecisionRunner decisions,
             IEventPublisher events,
+            IManifestBuilder manifest,
             ILogger<OrderCreateService> log)
         {
             _companies = companies;
@@ -53,6 +56,7 @@ namespace AeroBus.Core.Services.Distribution
             _inventory = inventory;
             _decisions = decisions;
             _events = events;
+            _manifest = manifest;
             _log = log;
         }
 
@@ -175,6 +179,10 @@ namespace AeroBus.Core.Services.Distribution
                     passengers = saved.Passengers?.Count ?? 0,
                 },
                 saved.CompanyId, actor: "order-create", ct);
+
+            // Index the departure-control manifest (one flight-keyed check-in row per
+            // passenger per flight). Best-effort — never fails a confirmed booking.
+            await _manifest.BuildForOrderAsync(saved, ct);
 
             return OrderCreateResult.Created(BuildView(saved));
         }
