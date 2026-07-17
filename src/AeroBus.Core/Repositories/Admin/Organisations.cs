@@ -24,7 +24,7 @@ namespace AeroBus.Core.Repositories.Admin
             [FromKeyedServices(Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentStore controlStore)
             : base(controlStore) { }
 
-        protected override string Collection => "organisations";
+        protected override string Collection => DfCollections.Admin.Organisations;
 
         public Task<Organisation?> GetByShortNameAsync(string shortName, CancellationToken ct = default) =>
             GetByFieldAsync("ShortName", shortName, ct);

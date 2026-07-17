@@ -13,7 +13,7 @@ namespace AeroBus.Core.Repositories.Admin
 
     public sealed class Environments(IDocumentStore store) : DocumentRepository<Model.Admin.Environment>(store), IEnvironments
     {
-        protected override string Collection => "environments";
+        protected override string Collection => DfCollections.Admin.Environments;
 
         public Task<IReadOnlyList<Model.Admin.Environment>> ListAsync(Guid? companyId = null, CancellationToken ct = default)
         {

@@ -22,7 +22,7 @@ namespace AeroBus.Core.Repositories.Catalogue
     public sealed class Schedules(IDocumentStore store) : ISchedules
     {
         private readonly IDocumentStore _store = store;
-        private const string C = "schedules";
+        private const string C = DfCollections.Catalogue.Schedules;
 
         public Task<Schedule?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
             _store.GetByIdAsync<Schedule>(C, id, ct);

@@ -162,14 +162,14 @@ try {
     $slug = "stackboot-" + $co.Substring(0, 8)
 
     $dfHeaders = @{ "Content-Type" = "application/json" }
-    Invoke-RestMethod -Method Post -Uri "$DfdbUrl/collections/companies" -Headers $dfHeaders -Body (@{ Id=$co; Name="Stack Boot"; Slug=$slug; Status="Active" } | ConvertTo-Json) | Out-Null
+    Invoke-RestMethod -Method Post -Uri "$DfdbUrl/collections/admin.companies" -Headers $dfHeaders -Body (@{ Id=$co; Name="Stack Boot"; Slug=$slug; Status="Active" } | ConvertTo-Json) | Out-Null
 
     $prefix = ($co -replace "[^a-z0-9]", "").Substring(0, 8)
     $secret = New-Object byte[] 32
     (New-Object System.Security.Cryptography.RNGCryptoServiceProvider).GetBytes($secret)
     $hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash($secret)
     $token = "ab_" + $prefix + "_" + [Convert]::ToBase64String($secret).TrimEnd("=").Replace("+", "-").Replace("/", "_")
-    Invoke-RestMethod -Method Post -Uri "$DfdbUrl/collections/apitokens" -Headers $dfHeaders -Body (@{ Id=[guid]::NewGuid().ToString(); CompanyId=$co; Name="stackboot-key"; Prefix=$prefix; Hash=[Convert]::ToBase64String($hash); Scopes="admin.all"; Created=(Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json) | Out-Null
+    Invoke-RestMethod -Method Post -Uri "$DfdbUrl/collections/admin.apitokens" -Headers $dfHeaders -Body (@{ Id=[guid]::NewGuid().ToString(); CompanyId=$co; Name="stackboot-key"; Prefix=$prefix; Hash=[Convert]::ToBase64String($hash); Scopes="admin.all"; Created=(Get-Date).ToUniversalTime().ToString("o") } | ConvertTo-Json) | Out-Null
 
     & (Join-Path $ScriptDir "seed-shop-rule.ps1") -Token $token -AeroBusUrl $AeroBusUrl -Env "dev"
     Write-Ok "rule published to dev (dfdb binding written)"

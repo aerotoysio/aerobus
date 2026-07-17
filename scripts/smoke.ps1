@@ -197,8 +197,8 @@ $abSecret = New-Object byte[] 32
 $abHash   = [System.Security.Cryptography.SHA256]::Create().ComputeHash($abSecret)
 $abKey    = "ab_" + $abPrefix + "_" + [Convert]::ToBase64String($abSecret).TrimEnd("=").Replace("+", "-").Replace("/", "_")
 try {
-    Df-Insert "companies" @{ Id = $companyId; Name = "Smoke Airlines"; Slug = $slug; Status = "Active"; OperatingCurrency = "AED"; DefaultExpectedLoadFactor = 0.8 } | Out-Null
-    Df-Insert "apitokens" @{ Id = [guid]::NewGuid().ToString(); CompanyId = $companyId; Name = "smoke-admin-key"; Prefix = $abPrefix; Hash = [Convert]::ToBase64String($abHash); Scopes = "admin.all"; Created = (Get-Date).ToUniversalTime().ToString("o") } | Out-Null
+    Df-Insert "admin.companies" @{ Id = $companyId; Name = "Smoke Airlines"; Slug = $slug; Status = "Active"; OperatingCurrency = "AED"; DefaultExpectedLoadFactor = 0.8 } | Out-Null
+    Df-Insert "admin.apitokens" @{ Id = [guid]::NewGuid().ToString(); CompanyId = $companyId; Name = "smoke-admin-key"; Prefix = $abPrefix; Hash = [Convert]::ToBase64String($abHash); Scopes = "admin.all"; Created = (Get-Date).ToUniversalTime().ToString("o") } | Out-Null
     Pass "Seeded company + admin.all ab_ key" "slug=$slug prefix=$abPrefix"
 } catch {
     Fail "Seed tenant" $_.Exception.Message
@@ -353,7 +353,7 @@ if ($scheduleId) {
         $flightId = $builtFlightIds[0]
         $state.PrimaryFlightId = $flightId
         try {
-            $inv = Df-Query "SELECT * FROM flightinventory WHERE FlightId = '$flightId'"
+            $inv = Df-Query "SELECT * FROM stock.flightinventory WHERE FlightId = '$flightId'"
             $buckets = @($inv | ForEach-Object { $_.Bucket })
             $hasJ = $buckets -contains "J"
             $hasY = $buckets -contains "Y"
@@ -482,7 +482,7 @@ try {
 function Get-TotalAvailable([string[]]$flightIds, [string]$bucket) {
     $sum = 0
     foreach ($fid in $flightIds) {
-        $rows = Df-Query "SELECT * FROM flightinventory WHERE FlightId = '$fid'"
+        $rows = Df-Query "SELECT * FROM stock.flightinventory WHERE FlightId = '$fid'"
         $row = $rows | Where-Object { $_.Bucket -eq $bucket } | Select-Object -First 1
         if ($row) { $sum += [int]$row.Available }
     }
@@ -655,7 +655,7 @@ try {
         # async, so don't race it here).
         $offer2 = $null
         if ($shop2.SearchId) {
-            $offerDocs = Df-Query "SELECT * FROM offers WHERE SearchId = '$($shop2.SearchId)'"
+            $offerDocs = Df-Query "SELECT * FROM offers.offers WHERE SearchId = '$($shop2.SearchId)'"
             $offer2 = ($offerDocs | Select-Object -First 1).Id
         }
         if ($offer2) {

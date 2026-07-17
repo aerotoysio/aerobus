@@ -1,3 +1,4 @@
+using AeroBus.Core.Data;
 using AeroBus.Core.Events;
 using AeroBus.Core.Model.Distribution;
 using AeroBus.Core.Model.Order;
@@ -130,7 +131,7 @@ namespace AeroBus.Core.Services.Distribution
                 var sell = await _inventory.SellAsync(company.Id, flightId, bucket, seats, ct);
                 if (sell.Success)
                     await _events.PublishAsync("inventory.adjusted",
-                        new EventSubject("flightinventory", flightId.ToString()),
+                        new EventSubject(DfCollections.Stock.FlightInventory, flightId.ToString()),
                         new { flightId, bucket, delta = -seats, reason = "order.create" },
                         company.Id, actor: "order-create", ct);
                 if (!sell.Success)
@@ -167,7 +168,7 @@ namespace AeroBus.Core.Services.Distribution
 
             var saved = await _orders.SaveAsync(confirmed, ct) ?? confirmed;
             await _events.PublishAsync("order.created",
-                new EventSubject("orders", saved.Id.ToString()),
+                new EventSubject(DfCollections.Order.Orders, saved.Id.ToString()),
                 new
                 {
                     orderId = saved.OrderId,
@@ -390,7 +391,7 @@ namespace AeroBus.Core.Services.Distribution
                 {
                     await _inventory.ReleaseAsync(companyId, flightId, bucket, seats, ct);
                     await _events.PublishAsync("inventory.adjusted",
-                        new EventSubject("flightinventory", flightId.ToString()),
+                        new EventSubject(DfCollections.Stock.FlightInventory, flightId.ToString()),
                         new { flightId, bucket, delta = seats, reason = "order.create.compensate" },
                         companyId, actor: "order-create", ct);
                 }

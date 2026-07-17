@@ -34,7 +34,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class EquipmentRepo(IDocumentStore store) : DocumentRepository<Equipment>(store), IEquipment
     {
-        protected override string Collection => "equipment";
+        protected override string Collection => DfCollections.Catalogue.Equipment;
 
         public Task<IReadOnlyList<Equipment>> ListByCompanyAsync(
             Guid companyId,

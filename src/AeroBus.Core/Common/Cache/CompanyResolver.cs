@@ -26,7 +26,7 @@ namespace AeroBus.Core.Common.Cache
             if (cached is not null) return cached;
 
             var fetched = store
-                .GetByIdAsync<Company>("companies", companyId)
+                .GetByIdAsync<Company>(DfCollections.Admin.Companies, companyId)
                 .GetAwaiter().GetResult();
 
             if (fetched is not null)

@@ -37,7 +37,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class StockKeepers(IDocumentStore store) : DocumentRepository<StockKeeper>(store), IStockKeepers
     {
-        protected override string Collection => "stockkeeper";
+        protected override string Collection => DfCollections.Catalogue.StockKeepers;
 
         public Task<IReadOnlyList<StockKeeper>> ListByCompanyAsync(
             Guid companyId,

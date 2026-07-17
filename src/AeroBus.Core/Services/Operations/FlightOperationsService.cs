@@ -1,3 +1,4 @@
+using AeroBus.Core.Data;
 using AeroBus.Core.Events;
 using AeroBus.Core.Model.Catalogue;
 using AeroBus.Core.Repositories.Catalogue;
@@ -91,7 +92,7 @@ namespace AeroBus.Core.Services.Operations
 
             var type = action == FlightStateMachine.Action.Depart ? "flight.departed" : "flight.status-changed";
             await _events.PublishAsync(type,
-                new EventSubject("flights", saved.Id.ToString()),
+                new EventSubject(DfCollections.Catalogue.Flights, saved.Id.ToString()),
                 new { id = saved.Id, flightNumber = saved.FlightNumber, from, to, action },
                 companyId, actor: "flight-operations", ct);
 

@@ -13,13 +13,13 @@ namespace AeroBus.Core.Repositories.Stock
     }
 
     /// <summary>
-    /// Per-flight, per-bucket inventory documents ("flightinventory" collection).
+    /// Per-flight, per-bucket inventory documents (DfCollections.Stock.FlightInventory collection).
     /// Created by the flight builder; sell/refund flows will mutate Sold/Available
     /// via the DocumentForge conditional-update primitive (top-level counters).
     /// </summary>
     public sealed class FlightInventories(IDocumentStore store) : DocumentRepository<FlightInventory>(store), IFlightInventories
     {
-        protected override string Collection => "flightinventory";
+        protected override string Collection => DfCollections.Stock.FlightInventory;
 
         public Task<IReadOnlyList<FlightInventory>> GetByFlightAsync(Guid flightId, CancellationToken ct = default) =>
             QueryAsync(Eq("FlightId", flightId), ct: ct);

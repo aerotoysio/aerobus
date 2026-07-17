@@ -16,7 +16,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class MediaRepo(IDocumentStore store) : DocumentRepository<Media>(store), IMedia
     {
-        protected override string Collection => "media";
+        protected override string Collection => DfCollections.Catalogue.Media;
 
         public Task<Media?> GetByIdAsync(Guid id, Guid? companyId = null, CancellationToken ct = default) =>
             base.GetByIdAsync(id, ct);

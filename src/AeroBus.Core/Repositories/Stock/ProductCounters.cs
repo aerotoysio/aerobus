@@ -14,7 +14,7 @@ namespace AeroBus.Core.Repositories.Stock
 
     public sealed class ProductCounters(IDocumentStore store) : DocumentRepository<ProductCounter>(store), IProductCounters
     {
-        protected override string Collection => "productcounters";
+        protected override string Collection => DfCollections.Stock.ProductCounters;
 
         // GetById / GetByCompany / Save come from DocumentRepository<ProductCounter>.
 

@@ -13,7 +13,7 @@ namespace AeroBus.Core.Repositories.Distribution
 
     public sealed class Offers(IDocumentStore store) : DocumentRepository<Offer>(store), IOffers
     {
-        protected override string Collection => "offers";
+        protected override string Collection => DfCollections.Offer.Offers;
 
         public Task<IReadOnlyList<Offer>> GetBySearchAsync(Guid searchId, CancellationToken ct = default) =>
             QueryAsync(Eq("SearchId", searchId), ct: ct);

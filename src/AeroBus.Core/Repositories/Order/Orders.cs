@@ -21,7 +21,7 @@ namespace AeroBus.Core.Repositories.Order
     public sealed class Orders(IDocumentStore store)
         : DocumentRepository<Model.Order.Order>(store), IOrders
     {
-        protected override string Collection => "orders";
+        protected override string Collection => DfCollections.Order.Orders;
 
         public Task<Model.Order.Order?> GetByOrderIdAsync(string orderId, CancellationToken ct = default) =>
             GetByFieldAsync("OrderId", orderId, ct);

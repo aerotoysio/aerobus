@@ -57,7 +57,7 @@ namespace AeroBus.Core.Services.Stock
     /// </summary>
     public sealed class InventoryService : IInventoryService
     {
-        private const string Collection = "flightinventory";
+        private const string Collection = DfCollections.Stock.FlightInventory;
         private static readonly TimeSpan IdCacheTtl = TimeSpan.FromSeconds(30);
 
         // (FlightId,Bucket) → DocumentForge _id, shared process-wide (singleton) so

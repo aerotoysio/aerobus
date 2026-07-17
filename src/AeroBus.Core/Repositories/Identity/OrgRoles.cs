@@ -16,7 +16,7 @@ namespace AeroBus.Core.Repositories.Identity
         [FromKeyedServices(ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store)
         : DocumentRepository<OrgRole>(store), IOrgRoles
     {
-        protected override string Collection => "orgroles";
+        protected override string Collection => DfCollections.Identity.OrgRoles;
     }
 
     public interface IOrgRoleAssignments
@@ -32,7 +32,7 @@ namespace AeroBus.Core.Repositories.Identity
         [FromKeyedServices(ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store)
         : DocumentRepository<OrgRoleAssignment>(store), IOrgRoleAssignments
     {
-        protected override string Collection => "orgroleassignments";
+        protected override string Collection => DfCollections.Identity.OrgRoleAssignments;
 
         public Task<OrgRoleAssignment?> GetByUserAsync(Guid userId, CancellationToken ct = default) =>
             GetByIdAsync(userId, ct);
@@ -49,7 +49,7 @@ namespace AeroBus.Core.Repositories.Identity
         [FromKeyedServices(ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store)
         : DocumentRepository<UserProfileDoc>(store), IUserProfiles
     {
-        protected override string Collection => "userprofiles";
+        protected override string Collection => DfCollections.Identity.UserProfiles;
 
         public Task<UserProfileDoc?> GetByUserAsync(Guid userId, CancellationToken ct = default) =>
             GetByIdAsync(userId, ct);

@@ -19,7 +19,7 @@ namespace AeroBus.Core.Repositories.Customer
     public sealed class Customers(IDocumentStore store) : ICustomers
     {
         private readonly IDocumentStore _store = store;
-        private const string C = "customers";
+        private const string C = DfCollections.Customer.Customers;
 
         public Task<Model.Customer.Customer?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
             _store.GetByIdAsync<Model.Customer.Customer>(C, id, ct);

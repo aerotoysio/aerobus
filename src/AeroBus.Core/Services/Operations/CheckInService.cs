@@ -1,3 +1,4 @@
+using AeroBus.Core.Data;
 using AeroBus.Core.Events;
 using AeroBus.Core.Model.Distribution;
 using AeroBus.Core.Model.Operations;
@@ -77,7 +78,7 @@ namespace AeroBus.Core.Services.Operations
             if (!already)
             {
                 await _events.PublishAsync("checkin.completed",
-                    new EventSubject("checkins", saved.Id.ToString()),
+                    new EventSubject(DfCollections.Operations.CheckIns, saved.Id.ToString()),
                     new { id = saved.Id, flightId, passengerId, seat = Seat(saved) },
                     companyId, actor: "check-in", ct);
                 await RollUpOrderAsync(companyId, saved, CheckInStatus.CheckedIn, OrderStateMachine.Action.CheckIn, ct);
@@ -102,7 +103,7 @@ namespace AeroBus.Core.Services.Operations
             var saved = await _checkIns.SaveAsync(row, ct) ?? row;
 
             await _events.PublishAsync("passenger.boarded",
-                new EventSubject("checkins", saved.Id.ToString()),
+                new EventSubject(DfCollections.Operations.CheckIns, saved.Id.ToString()),
                 new { id = saved.Id, flightId, passengerId, sequence = saved.BoardingSequence, seat = Seat(saved) },
                 companyId, actor: "boarding", ct);
             await RollUpOrderAsync(companyId, saved, CheckInStatus.Boarded, OrderStateMachine.Action.Board, ct);

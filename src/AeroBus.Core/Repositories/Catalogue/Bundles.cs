@@ -25,7 +25,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class Bundles(IDocumentStore store) : DocumentRepository<Bundle>(store), IBundles
     {
-        protected override string Collection => "bundles";
+        protected override string Collection => DfCollections.Catalogue.Bundles;
 
         public Task<IReadOnlyList<Bundle>> GetPrettyByCompanyAsync(Guid companyId, CancellationToken ct = default) =>
             QueryAsync(Eq("CompanyId", companyId), ct: ct);

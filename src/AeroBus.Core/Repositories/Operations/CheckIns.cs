@@ -15,14 +15,14 @@ namespace AeroBus.Core.Repositories.Operations
     }
 
     /// <summary>
-    /// Per-(flight, passenger) departure-control documents ("checkins" collection).
+    /// Per-(flight, passenger) departure-control documents (DfCollections.Operations.CheckIns collection).
     /// Written at booking time and advanced by the DCS surface; the FlightId key is
     /// top-level so the manifest is a single indexed query (mirrors
     /// <c>FlightInventories.GetByFlightAsync</c>).
     /// </summary>
     public sealed class CheckIns(IDocumentStore store) : DocumentRepository<PassengerCheckIn>(store), ICheckIns
     {
-        protected override string Collection => "checkins";
+        protected override string Collection => DfCollections.Operations.CheckIns;
 
         public Task<IReadOnlyList<PassengerCheckIn>> GetByFlightAsync(Guid flightId, CancellationToken ct = default) =>
             QueryAsync(Eq("FlightId", flightId), ct: ct);
