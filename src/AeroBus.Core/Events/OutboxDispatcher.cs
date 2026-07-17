@@ -41,11 +41,16 @@ namespace AeroBus.Core.Events
                 _opts.PollSeconds, _opts.MaxAttempts, _opts.BackoffBaseSeconds, _opts.BackoffCapSeconds);
 
             var delay = TimeSpan.FromSeconds(Math.Max(1, _opts.PollSeconds));
+            var consecutiveFailures = 0;
             while (!stoppingToken.IsCancellationRequested)
             {
+                var wait = delay;
                 try
                 {
                     await PumpOnceAsync(stoppingToken);
+                    if (consecutiveFailures > 0)
+                        _log.LogInformation("Outbox dispatch recovered after {Failures} failed cycle(s).", consecutiveFailures);
+                    consecutiveFailures = 0;
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -53,11 +58,26 @@ namespace AeroBus.Core.Events
                 }
                 catch (Exception ex)
                 {
-                    // A poll-loop error must not kill the pump; log and keep going.
-                    _log.LogError(ex, "Outbox dispatch cycle failed; will retry next poll.");
+                    // A poll-loop error must not kill the pump; log and keep going —
+                    // but don't stack-trace every poll while the store is down
+                    // (e.g. DocumentForge not running locally): full detail on the
+                    // first failure, then compact one-liners with an exponentially
+                    // backed-off poll (capped) until it recovers.
+                    consecutiveFailures++;
+                    var backoffSeconds = Math.Min(
+                        _opts.BackoffCapSeconds,
+                        Math.Max(1, _opts.PollSeconds) * Math.Pow(2, Math.Min(consecutiveFailures - 1, 6)));
+                    wait = TimeSpan.FromSeconds(backoffSeconds);
+
+                    if (consecutiveFailures == 1)
+                        _log.LogError(ex, "Outbox dispatch cycle failed; backing off (next attempt in {Wait}s).", wait.TotalSeconds);
+                    else
+                        _log.LogWarning(
+                            "Outbox dispatch still failing ({Failures} cycles): {Error}. Next attempt in {Wait}s.",
+                            consecutiveFailures, ex.Message, wait.TotalSeconds);
                 }
 
-                try { await Task.Delay(delay, stoppingToken); }
+                try { await Task.Delay(wait, stoppingToken); }
                 catch (OperationCanceledException) { break; }
             }
 

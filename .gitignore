@@ -11,6 +11,8 @@ TestResults/
 
 ## Local secrets & data
 .env
+.env.demo
+scripts/.env.demo
 *.local.json
 # Anchored to the repo root: an unanchored data/ also swallowed
 # src/AeroBus.Core/Data (the DocumentForge store layer) at any depth.
