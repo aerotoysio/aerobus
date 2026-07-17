@@ -72,6 +72,10 @@ identity/security tables into Keycloak, and the aerostudio onboarding wizard UI.
 
 ## Quickstart
 
+> **Where does every setting live?** See [`docs/configuration.md`](docs/configuration.md) —
+> the one-page map of DocumentForge / Keycloak / RuleForge configuration across the whole
+> stack (aerobus, aerostudio, aerodesk, aeroauth), plus the fresh-install order.
+
 ### Docker Compose (full stack)
 
 Brings up DocumentForge + RuleForge + AeroBus together:
