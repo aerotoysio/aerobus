@@ -136,6 +136,7 @@ the ooms admin/order services so existing UIs can repoint here (see
 | Diagnostics | `GET /health`, `GET /health/documentforge`, `GET /version` | open |
 | Identity | `/identity/me`, `/identity/users`, `/identity/roles`, `/identity/permissions`, `/identity/agents`, `/identity/organizations` (+ anonymous `POST /identity/onboarding`) | Bearer + `identity.*` / `role.*` / `agent.*` perms |
 | Admin | `/admin/companies`, `/admin/companies/config`, `/admin/workspaces` | Bearer |
+| Demo seed | `GET /admin/demo-seed` (manifest), `POST /admin/demo-seed/{airports,equipment,markets,flights}` | Bearer + `org.manage` |
 | Catalogue | `/catalogue/{continents,countries,regions,airports,market-zones,equipment,layouts,schedules,flights,connection-rules,flight-builder,bundles,products,stockkeeper}` | Bearer + `catalogue.view` |
 | Customer | `/customer` | Bearer + `customers.view` |
 | Offer | `/offer/shop`, `/offer/price` | Bearer + `offers.view` |
