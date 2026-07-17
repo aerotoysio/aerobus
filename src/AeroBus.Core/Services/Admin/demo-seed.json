@@ -1,0 +1,72 @@
+{
+  "_comment": "The demo airline in one flat file: what a freshly-onboarded org gets when it runs the demo seed. Times are station-local; schedules run daily from today for `days` days, flown under the org's OWN designator. Everything seeded from here is tagged 'demo' so it can be identified (and later removed) as a set.",
+  "days": 14,
+  "airports": [
+    { "code": "DXB", "name": "Dubai International", "city": "Dubai", "tz": "Asia/Dubai" },
+    { "code": "LHR", "name": "London Heathrow", "city": "London", "tz": "Europe/London" },
+    { "code": "JFK", "name": "John F. Kennedy International", "city": "New York", "tz": "America/New_York" },
+    { "code": "SIN", "name": "Singapore Changi", "city": "Singapore", "tz": "Asia/Singapore" },
+    { "code": "SYD", "name": "Sydney Kingsford Smith", "city": "Sydney", "tz": "Australia/Sydney" },
+    { "code": "CDG", "name": "Paris Charles de Gaulle", "city": "Paris", "tz": "Europe/Paris" },
+    { "code": "BOM", "name": "Chhatrapati Shivaji Maharaj International", "city": "Mumbai", "tz": "Asia/Kolkata" },
+    { "code": "HND", "name": "Tokyo Haneda", "city": "Tokyo", "tz": "Asia/Tokyo" }
+  ],
+  "equipment": [
+    { "code": "320", "name": "Airbus A320", "rangeNm": 3300, "capacity": 180 },
+    { "code": "77W", "name": "Boeing 777-300ER", "rangeNm": 7370, "capacity": 354 },
+    { "code": "388", "name": "Airbus A380-800", "rangeNm": 8000, "capacity": 489 }
+  ],
+  "markets": [
+    {
+      "origin": "DXB", "destination": "LHR",
+      "flights": [
+        { "number": "101", "dep": "08:30", "arr": "12:45", "arrOffsetDays": 0, "equipment": "77W" },
+        { "number": "102", "dep": "14:30", "arr": "00:30", "arrOffsetDays": 1, "equipment": "77W", "return": true }
+      ]
+    },
+    {
+      "origin": "DXB", "destination": "JFK",
+      "flights": [
+        { "number": "201", "dep": "02:20", "arr": "08:50", "arrOffsetDays": 0, "equipment": "388" },
+        { "number": "202", "dep": "11:00", "arr": "07:55", "arrOffsetDays": 1, "equipment": "388", "return": true }
+      ]
+    },
+    {
+      "origin": "DXB", "destination": "SIN",
+      "flights": [
+        { "number": "301", "dep": "09:40", "arr": "21:15", "arrOffsetDays": 0, "equipment": "388" },
+        { "number": "302", "dep": "23:05", "arr": "02:20", "arrOffsetDays": 1, "equipment": "388", "return": true }
+      ]
+    },
+    {
+      "origin": "DXB", "destination": "SYD",
+      "flights": [
+        { "number": "401", "dep": "21:30", "arr": "17:45", "arrOffsetDays": 1, "equipment": "388" },
+        { "number": "402", "dep": "19:40", "arr": "05:10", "arrOffsetDays": 1, "equipment": "388", "return": true }
+      ]
+    },
+    {
+      "origin": "DXB", "destination": "CDG",
+      "flights": [
+        { "number": "501", "dep": "07:45", "arr": "12:30", "arrOffsetDays": 0, "equipment": "77W" },
+        { "number": "502", "dep": "14:10", "arr": "23:30", "arrOffsetDays": 0, "equipment": "77W", "return": true }
+      ]
+    },
+    {
+      "origin": "DXB", "destination": "BOM",
+      "flights": [
+        { "number": "601", "dep": "04:35", "arr": "09:10", "arrOffsetDays": 0, "equipment": "320" },
+        { "number": "602", "dep": "10:40", "arr": "12:35", "arrOffsetDays": 0, "equipment": "320", "return": true },
+        { "number": "603", "dep": "18:20", "arr": "22:55", "arrOffsetDays": 0, "equipment": "320" },
+        { "number": "604", "dep": "23:50", "arr": "01:55", "arrOffsetDays": 1, "equipment": "320", "return": true }
+      ]
+    },
+    {
+      "origin": "DXB", "destination": "HND",
+      "flights": [
+        { "number": "701", "dep": "08:05", "arr": "22:45", "arrOffsetDays": 0, "equipment": "77W" },
+        { "number": "702", "dep": "00:30", "arr": "06:20", "arrOffsetDays": 0, "equipment": "77W", "return": true }
+      ]
+    }
+  ]
+}

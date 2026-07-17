@@ -14,4 +14,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The demo airline definition — read by DemoSeedService at runtime. -->
+    <EmbeddedResource Include="Services\Admin\demo-seed.json" />
+  </ItemGroup>
+
 </Project>

@@ -35,6 +35,9 @@ namespace AeroBus.Api.Bootstrap
             app.MapGroup("/admin/companies/config").WithTags("Admin").AdminCompanyConfigMapping();
             app.MapGroup("/admin/workspaces").WithTags("Admin").AdminWorkspacesMapping();
 
+            // Demo-airline seed for the onboarding welcome flow — org admins only.
+            app.MapGroup("/admin/demo-seed").WithTags("Admin").DemoSeedMapping().RequireAuthorization("org.manage");
+
             // Catalogue — route shapes identical to the ooms admin-service.
             // Group-level RequireAuthorization is a deliberate deviation: ooms
             // left these anonymous (clearly accidental — every handler reads

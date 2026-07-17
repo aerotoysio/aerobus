@@ -22,6 +22,10 @@ namespace AeroBus.Core.Repositories.Admin
             services.AddScoped<IOrganisations, Organisations>();
             services.AddScoped<ProvisioningService>();
 
+            // The demo-airline seed behind the onboarding welcome flow (manifest +
+            // idempotent per-section execution from the embedded demo-seed.json).
+            services.AddScoped<DemoSeedService>();
+
             services.AddScoped<IApiTokens, ApiTokens>();
             services.AddScoped<ApiTokenService>();
 
