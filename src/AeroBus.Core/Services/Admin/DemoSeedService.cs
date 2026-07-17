@@ -66,13 +66,13 @@ namespace AeroBus.Core.Services.Admin
             var sections = new List<DemoSeedSection>
             {
                 new(Sections.Airports, "Airports", seed.Airports.Count,
-                    await _store.CountAsync("airports", ByCompany(companyId), ct)),
+                    await _store.CountAsync(DfCollections.Catalogue.Airports, ByCompany(companyId), ct)),
                 new(Sections.Equipment, "Equipment types", seed.Equipment.Count,
-                    await _store.CountAsync("equipment", ByCompany(companyId), ct)),
+                    await _store.CountAsync(DfCollections.Catalogue.Equipment, ByCompany(companyId), ct)),
                 new(Sections.Markets, "Demo markets & schedules", schedulesPlanned,
-                    await _store.CountAsync("schedules", ByDemo(companyId), ct)),
+                    await _store.CountAsync(DfCollections.Catalogue.Schedules, ByDemo(companyId), ct)),
                 new(Sections.Flights, "Flights", schedulesPlanned * seed.Days,
-                    await _store.CountAsync("flights", ByDemo(companyId), ct)),
+                    await _store.CountAsync(DfCollections.Catalogue.Flights, ByDemo(companyId), ct)),
             };
             return new DemoSeedManifest(seeded, sections);
         }
@@ -105,7 +105,7 @@ namespace AeroBus.Core.Services.Admin
             var created = 0;
             foreach (var a in Definition.Value.Airports)
             {
-                var existing = await _store.CountAsync("airports",
+                var existing = await _store.CountAsync(DfCollections.Catalogue.Airports,
                     new Dictionary<string, object?> { ["CompanyId"] = companyId, ["Code"] = a.Code }, ct);
                 if (existing > 0) continue;
 
@@ -115,7 +115,7 @@ namespace AeroBus.Core.Services.Admin
                     TimeZoneId = a.Tz, Status = "Active", Tags = DemoTag,
                     Created = now, CompanyId = companyId,
                 };
-                await _store.UpsertAsync("airports", airport, airport.Id, ct);
+                await _store.UpsertAsync(DfCollections.Catalogue.Airports, airport, airport.Id, ct);
                 created++;
             }
             return new DemoSeedResult(Sections.Airports, created, Definition.Value.Airports.Count);
@@ -127,7 +127,7 @@ namespace AeroBus.Core.Services.Admin
             var created = 0;
             foreach (var e in Definition.Value.Equipment)
             {
-                var existing = await _store.CountAsync("equipment",
+                var existing = await _store.CountAsync(DfCollections.Catalogue.Equipment,
                     new Dictionary<string, object?> { ["CompanyId"] = companyId, ["EquipmentCode"] = e.Code }, ct);
                 if (existing > 0) continue;
 
@@ -137,7 +137,7 @@ namespace AeroBus.Core.Services.Admin
                     RangeNm = e.RangeNm, Status = "Active", Tags = DemoTag,
                     Created = now, CompanyId = companyId,
                 };
-                await _store.UpsertAsync("equipment", equipment, equipment.Id, ct);
+                await _store.UpsertAsync(DfCollections.Catalogue.Equipment, equipment, equipment.Id, ct);
                 created++;
             }
             return new DemoSeedResult(Sections.Equipment, created, Definition.Value.Equipment.Count);
@@ -161,7 +161,7 @@ namespace AeroBus.Core.Services.Admin
                 total++;
                 var (from, to) = f.Return ? (market.Destination, market.Origin) : (market.Origin, market.Destination);
 
-                var existing = await _store.CountAsync("schedules", new Dictionary<string, object?>
+                var existing = await _store.CountAsync(DfCollections.Catalogue.Schedules, new Dictionary<string, object?>
                 {
                     ["CompanyId"] = companyId, ["FlightNumber"] = f.Number, ["DepartureStation"] = from,
                 }, ct);
@@ -191,7 +191,7 @@ namespace AeroBus.Core.Services.Admin
                     Created = now,
                     ConcurrencyId = Guid.NewGuid(),
                 };
-                await _store.UpsertAsync("schedules", schedule, schedule.Id, ct);
+                await _store.UpsertAsync(DfCollections.Catalogue.Schedules, schedule, schedule.Id, ct);
                 created++;
             }
             return new DemoSeedResult(Sections.Markets, created, total);
@@ -202,7 +202,7 @@ namespace AeroBus.Core.Services.Admin
         /// (the builder stamps them "Built"), so re-runs are no-ops.</summary>
         private async Task<DemoSeedResult> BuildFlightsAsync(Guid companyId, CancellationToken ct)
         {
-            var schedules = await _store.QueryAsync<Schedule>("schedules",
+            var schedules = await _store.QueryAsync<Schedule>(DfCollections.Catalogue.Schedules,
                 new Dictionary<string, object?> { ["CompanyId"] = companyId, ["Tags"] = DemoTag }, ct: ct);
 
             var built = 0;
@@ -220,7 +220,7 @@ namespace AeroBus.Core.Services.Admin
                 Description = "Demo airline seed completed (airports, equipment, markets, flights).",
             }, ct);
 
-            var totalFlights = await _store.CountAsync("flights", ByDemo(companyId), ct);
+            var totalFlights = await _store.CountAsync(DfCollections.Catalogue.Flights, ByDemo(companyId), ct);
             return new DemoSeedResult(Sections.Flights, built, totalFlights);
         }
 

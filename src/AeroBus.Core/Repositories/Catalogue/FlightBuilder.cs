@@ -1,3 +1,4 @@
+using AeroBus.Core.Data;
 using AeroBus.Core.Common.Cache;
 using AeroBus.Core.Events;
 using AeroBus.Core.Model.Catalogue;
@@ -346,7 +347,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
         private Task PublishFlightBuiltAsync(Flight flight, CancellationToken ct) =>
             _events.PublishAsync("flight.built",
-                new EventSubject("flights", flight.Id.ToString()),
+                new EventSubject(DfCollections.Catalogue.Flights, flight.Id.ToString()),
                 new
                 {
                     id = flight.Id,
@@ -361,7 +362,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
         private Task PublishFlightCancelledAsync(Flight flight, CancellationToken ct) =>
             _events.PublishAsync("flight.cancelled",
-                new EventSubject("flights", flight.Id.ToString()),
+                new EventSubject(DfCollections.Catalogue.Flights, flight.Id.ToString()),
                 new
                 {
                     id = flight.Id,
@@ -375,7 +376,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
         private Task PublishScheduleChangedAsync(Schedule schedule, CancellationToken ct) =>
             _events.PublishAsync("schedule.changed",
-                new EventSubject("schedules", schedule.Id.ToString()),
+                new EventSubject(DfCollections.Catalogue.Schedules, schedule.Id.ToString()),
                 new
                 {
                     id = schedule.Id,

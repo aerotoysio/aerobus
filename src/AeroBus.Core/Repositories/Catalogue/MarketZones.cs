@@ -15,7 +15,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class MarketZones(IDocumentStore store) : DocumentRepository<MarketZone>(store), IMarketZones
     {
-        protected override string Collection => "marketzones";
+        protected override string Collection => DfCollections.Catalogue.MarketZones;
 
         // Selectors are embedded in the zone, so save/load carry them in one round trip.
         // Compiling selectors -> IncludedAirports lives in MarketZoneService.Build

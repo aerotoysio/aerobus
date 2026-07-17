@@ -23,5 +23,14 @@ namespace AeroBus.Core.Data
         /// RuleForge reads its rules from.
         /// </summary>
         public string? Database { get; set; }
+
+        /// <summary>
+        /// The named database holding the SHARED control plane (tenant registry,
+        /// identity/RBAC, API tokens, events outbox). Created automatically at
+        /// startup. A named database keeps every control call on DocumentForge's
+        /// scoped <c>db/{name}</c> surface, where namespaced collection names are
+        /// fully supported on all deployed server versions.
+        /// </summary>
+        public string ControlDatabase { get; set; } = "control";
     }
 }

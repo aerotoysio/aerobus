@@ -49,7 +49,7 @@ org is onboarded.
 - **Onboarding** (`POST /identity/onboarding`) now provisions a tenant end-to-end:
   Keycloak org + admin → create `db/{shortName}` → seed it (a `Company` settings
   doc + a reference starter pack of airports/equipment) → register the org in the
-  control-plane `organisations` registry. Anonymous today — **gate before prod**
+  control-plane `admin.organisations` registry. Anonymous today — **gate before prod**
   (it creates databases).
 - **Per-request routing**: `TenantDatabaseMiddleware` resolves the caller's
   `companyId` → the org's `shortName` (from the registry, cached) and stamps
@@ -59,9 +59,9 @@ org is onboarded.
 - **What's per-tenant vs shared.** The airline's business data (companies,
   catalogue, orders, customers, offers, stock, checkins) lives in its own database
   — full physical separation. A small set of collections read *at auth-time or by
-  background jobs* stays in the **shared control database** because there's no
+  background jobs* stays in the **shared control database** (a named `control` database, ensured at startup) because there's no
   resolved tenant DB at that moment: the org registry, identity/RBAC
-  (`orgroles`/`orgroleassignments`/`userprofiles`), `apitokens`, the events outbox,
+  (`identity.orgroles`/`identity.orgroleassignments`/`identity.userprofiles`), `admin.apitokens`, the events outbox,
   and rules. These still carry `companyId` for scoping. (RBAC/tokens are candidates
   to move fully into Keycloak later.)
 
@@ -157,7 +157,7 @@ authenticate flow) were removed in favour of `/identity`.
 
 ## Event catalog
 
-Events are written to the `outboxevents` outbox the instant the domain writes its
+Events are written to the `events.outboxevents` outbox the instant the domain writes its
 change, dispatched at-least-once, and delivered to webhooks (`X-AeroBus-Signature`,
 HMAC-SHA256 over the exact body) + the SSE stream. Type filters support exact
 (`order.created`) or trailing-glob (`order.*`) patterns.

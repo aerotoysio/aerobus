@@ -56,33 +56,33 @@ public sealed class ProvisioningRoutingTests
     public async Task Tenant_data_is_physically_isolated_to_its_own_database()
     {
         await _fx.Client.EnsureDatabaseAsync(_shortName);
-        await WarmAsync(ClientFor(_shortName), "companies");
+        await WarmAsync(ClientFor(_shortName), DfCollections.Admin.Companies);
         var tenant = StoreFor(_shortName);
         var companyId = Guid.NewGuid();
 
-        await tenant.UpsertAsync("companies", new Company
+        await tenant.UpsertAsync(DfCollections.Admin.Companies, new Company
         {
             Id = companyId, Name = "Test Air", Slug = _shortName, Designator = "TA",
             OperatingCurrency = "AED", Status = "Active", Created = DateTime.UtcNow,
         }, companyId);
 
         // Present in the org's own database…
-        Assert.NotNull(await tenant.GetByIdAsync<Company>("companies", companyId));
+        Assert.NotNull(await tenant.GetByIdAsync<Company>(DfCollections.Admin.Companies, companyId));
         // …and NOT visible in the default/control database (true separation).
-        Assert.Null(await _fx.Store.GetByIdAsync<Company>("companies", companyId));
+        Assert.Null(await _fx.Store.GetByIdAsync<Company>(DfCollections.Admin.Companies, companyId));
     }
 
     [Fact]
     public async Task Reference_seed_pack_lands_in_the_org_database()
     {
         await _fx.Client.EnsureDatabaseAsync(_shortName);
-        await WarmAsync(ClientFor(_shortName), "airports", "equipment");
+        await WarmAsync(ClientFor(_shortName), DfCollections.Catalogue.Airports, DfCollections.Catalogue.Equipment);
         var tenant = StoreFor(_shortName);
         var companyId = Guid.NewGuid();
 
         await ReferenceSeed.SeedAsync(tenant, companyId);
 
-        var airports = await tenant.QueryAsync<Airport>("airports");
+        var airports = await tenant.QueryAsync<Airport>(DfCollections.Catalogue.Airports);
         Assert.True(airports.Count >= 5);
         Assert.Contains(airports, a => a.Code == "DXB");
         Assert.All(airports, a => Assert.Equal(companyId, a.CompanyId));
@@ -91,7 +91,7 @@ public sealed class ProvisioningRoutingTests
     [Fact]
     public async Task Organisation_registry_round_trips_in_the_control_database()
     {
-        await WarmAsync(_fx.Client, "organisations");
+        await WarmAsync(_fx.Client, DfCollections.Admin.Organisations);
         var orgs = new Organisations(_fx.Store);
         var companyId = Guid.NewGuid();
 

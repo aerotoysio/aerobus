@@ -1,3 +1,4 @@
+using AeroBus.Core.Data;
 using AeroBus.Core.Events;
 using AeroBus.Core.Repositories.Customer;
 
@@ -53,7 +54,7 @@ namespace AeroBus.Core.Services.Customer
             {
                 var c = saved ?? model;
                 await _events.PublishAsync("customer.created",
-                    new EventSubject("customers", c.Id.ToString()),
+                    new EventSubject(DfCollections.Customer.Customers, c.Id.ToString()),
                     new { id = c.Id, customerNumber = c.CustomerNumber, lastName = c.LastName, status = c.Status },
                     c.CompanyId, actor: "customers", ct);
             }

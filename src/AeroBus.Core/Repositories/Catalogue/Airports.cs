@@ -15,7 +15,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class Airports(IDocumentStore store) : DocumentRepository<Airport>(store), IAirports
     {
-        protected override string Collection => "airports";
+        protected override string Collection => DfCollections.Catalogue.Airports;
 
         // GetById / GetByCompany / Save come from DocumentRepository<Airport>.
 

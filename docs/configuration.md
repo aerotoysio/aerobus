@@ -21,7 +21,7 @@ Override any key with an environment variable using `Section__Key` (double under
 
 | Section | Keys | Meaning |
 | --- | --- | --- |
-| `DocumentForge` | `BaseUrl`, `ApiKey`, `Database` | The datastore. `Database` is the **static fallback** DB; authenticated org requests are routed to the org's own `db/{shortName}` by the tenancy middleware (see README "Multi-tenancy") |
+| `DocumentForge` | `BaseUrl`, `ApiKey`, `Database`, `ControlDatabase` | The datastore. `Database` is the **static fallback** DB; authenticated org requests are routed to the org's own `db/{shortName}` by the tenancy middleware (see README "Multi-tenancy") |
 | `Keycloak` | `BaseUrl`, `Realm`, `ClientId` (=`aerobus`), `ClientSecret`, `Audience` (=`aerobus`) | JWT validation (`{BaseUrl}/realms/{Realm}` issuer, `aud=aerobus`) **and** the admin service account used to create orgs/users. Leaving `BaseUrl`/`Realm` empty disables the Keycloak scheme (dev API-key-only mode) |
 | `RuleForge` | `BaseUrl`, `ApiKey`, `TimeoutMs`, `Endpoints:*` | Decision points; degrade to Allow when the engine is down |
 | `Events` | *(optional)* `PollSeconds`, `MaxAttempts`, `BackoffBaseSeconds`, `BackoffCapSeconds`, `BatchSize`, `WebhookTimeoutSeconds`, `RetentionDays` | Outbox dispatcher; all defaulted, runs unconfigured |

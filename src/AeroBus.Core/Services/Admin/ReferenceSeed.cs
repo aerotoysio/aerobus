@@ -38,7 +38,7 @@ namespace AeroBus.Core.Services.Admin
                     Created = now,
                     CompanyId = companyId,
                 };
-                await store.UpsertAsync("airports", airport, airport.Id, ct);
+                await store.UpsertAsync(DfCollections.Catalogue.Airports, airport, airport.Id, ct);
             }
 
             var equipment = new Equipment
@@ -51,7 +51,7 @@ namespace AeroBus.Core.Services.Admin
                 Created = now,
                 CompanyId = companyId,
             };
-            await store.UpsertAsync("equipment", equipment, equipment.Id, ct);
+            await store.UpsertAsync(DfCollections.Catalogue.Equipment, equipment, equipment.Id, ct);
         }
     }
 }

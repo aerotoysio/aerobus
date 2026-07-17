@@ -14,7 +14,7 @@ namespace AeroBus.Core.Repositories.Admin
 
     public sealed class Companies(IDocumentStore store) : DocumentRepository<Company>(store), ICompanies
     {
-        protected override string Collection => "companies";
+        protected override string Collection => DfCollections.Admin.Companies;
 
         // Bespoke: enrich the company with its embedded configs. The
         // companyconfigs collection is composite-keyed (CompanyId+Key) and is
@@ -26,7 +26,7 @@ namespace AeroBus.Core.Repositories.Admin
                 return null;
 
             var configs = await Store.QueryAsync<CompanyConfig>(
-                "companyconfigs", Eq("CompanyId", id), ct: ct);
+                DfCollections.Admin.CompanyConfigs, Eq("CompanyId", id), ct: ct);
 
             company.Configs = configs.ToList();
 

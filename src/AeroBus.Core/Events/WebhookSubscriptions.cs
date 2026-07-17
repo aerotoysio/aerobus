@@ -22,7 +22,7 @@ namespace AeroBus.Core.Events
         [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store)
         : DocumentRepository<WebhookSubscription>(store), IWebhookSubscriptions
     {
-        protected override string Collection => "webhooksubscriptions";
+        protected override string Collection => DfCollections.Events.WebhookSubscriptions;
 
         public Task<IReadOnlyList<WebhookSubscription>> GetActiveAsync(CancellationToken ct = default) =>
             QueryAsync(Eq("Active", true), ct: ct);

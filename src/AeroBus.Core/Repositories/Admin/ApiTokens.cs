@@ -41,7 +41,7 @@ namespace AeroBus.Core.Repositories.Admin
         [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store)
         : DocumentRepository<ApiToken>(store), IApiTokens
     {
-        protected override string Collection => "apitokens";
+        protected override string Collection => DfCollections.Admin.ApiTokens;
 
         public Task<IReadOnlyList<ApiToken>> GetByPrefixAsync(string prefix, CancellationToken ct = default) =>
             QueryAsync(Eq("Prefix", prefix), ct: ct);

@@ -20,7 +20,7 @@ namespace AeroBus.Core.Common.Cache
             if (!cache.TryGet<ConnectionRule>(CacheKeys.Connection, out var rules))
             {
                 var loaded = store
-                    .QueryAsync<ConnectionRule>("connectionrules")
+                    .QueryAsync<ConnectionRule>(DfCollections.Catalogue.ConnectionRules)
                     .GetAwaiter().GetResult();
                 cache.Set(CacheKeys.Connection, loaded);
                 rules = loaded;

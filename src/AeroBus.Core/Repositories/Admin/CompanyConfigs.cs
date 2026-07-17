@@ -14,7 +14,7 @@ namespace AeroBus.Core.Repositories.Admin
 
     public sealed class CompanyConfigs(IDocumentStore store) : DocumentRepository<CompanyConfig>(store), ICompanyConfigs
     {
-        protected override string Collection => "companyconfigs";
+        protected override string Collection => DfCollections.Admin.CompanyConfigs;
 
         // CompanyConfig has a composite logical key (CompanyId, Key). We derive a stable
         // surrogate Guid from it so saves are idempotent and key lookups are direct.

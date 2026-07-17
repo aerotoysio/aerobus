@@ -15,7 +15,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class AttributesRepo(IDocumentStore store) : DocumentRepository<Model.Catalogue.Attribute>(store), IAttributes
     {
-        protected override string Collection => "attributes";
+        protected override string Collection => DfCollections.Catalogue.Attributes;
 
         public Task<Model.Catalogue.Attribute?> GetByIdAsync(Guid id, Guid? companyId = null, CancellationToken ct = default) =>
             base.GetByIdAsync(id, ct);

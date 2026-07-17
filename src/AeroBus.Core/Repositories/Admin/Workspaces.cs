@@ -13,7 +13,7 @@ namespace AeroBus.Core.Repositories.Admin
 
     public sealed class Workspaces(IDocumentStore store) : DocumentRepository<Workspace>(store), IWorkspaces
     {
-        protected override string Collection => "workspaces";
+        protected override string Collection => DfCollections.Admin.Workspaces;
 
         public Task<bool> DeleteAsync(Guid id, Guid ConcurrencyId, CancellationToken ct = default) =>
             base.DeleteAsync(id, ct);

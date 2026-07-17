@@ -15,7 +15,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class Continents(IDocumentStore store) : DocumentRepository<Continent>(store), IContinents
     {
-        protected override string Collection => "continents";
+        protected override string Collection => DfCollections.Catalogue.Continents;
 
         public Task<IReadOnlyList<Continent>> ListByCompanyAsync(
             Guid companyId, string? search, int pageNumber, int pageSize, CancellationToken ct = default) =>

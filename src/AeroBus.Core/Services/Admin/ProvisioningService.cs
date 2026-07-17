@@ -70,7 +70,7 @@ namespace AeroBus.Core.Services.Admin
 
             // 3. Seed the new database (explicit-db store — the org isn't routable yet).
             var store = _storeFactory.ForDatabase(shortName);
-            await store.UpsertAsync("companies", new Company
+            await store.UpsertAsync(DfCollections.Admin.Companies, new Company
             {
                 Id = companyId,
                 Name = req.OrganizationName.Trim(),
@@ -84,7 +84,7 @@ namespace AeroBus.Core.Services.Admin
             }, companyId, ct);
 
             var tzConfigId = Guid.NewGuid();
-            await store.UpsertAsync("companyconfigs", new CompanyConfig
+            await store.UpsertAsync(DfCollections.Admin.CompanyConfigs, new CompanyConfig
             {
                 Id = tzConfigId,
                 CompanyId = companyId,

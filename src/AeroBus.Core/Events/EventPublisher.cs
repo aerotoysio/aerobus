@@ -51,8 +51,8 @@ namespace AeroBus.Core.Events
     /// </summary>
     public sealed class EventPublisher : IEventPublisher
     {
-        private const string CursorCollection = "eventcursors";
-        private const string OutboxCollection = "outboxevents";
+        private const string CursorCollection = DfCollections.Events.Cursors;
+        private const string OutboxCollection = DfCollections.Events.Outbox;
         private static readonly TimeSpan IdCacheTtl = TimeSpan.FromSeconds(30);
 
         // CompanyId (Guid.Empty == global) → cursor doc's DocumentForge _id. Static

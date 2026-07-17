@@ -48,7 +48,7 @@ namespace AeroBus.Core.Events
     {
         private readonly IDocumentForgeClient _df = df;
 
-        protected override string Collection => "outboxevents";
+        protected override string Collection => DfCollections.Events.Outbox;
 
         public Task<IReadOnlyList<OutboxEvent>> GetDispatchableAsync(DateTime nowUtc, int limit, CancellationToken ct = default)
         {

@@ -16,7 +16,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class Products(IDocumentStore store) : DocumentRepository<Product>(store), IProducts
     {
-        protected override string Collection => "products";
+        protected override string Collection => DfCollections.Catalogue.Products;
 
         // Product metadata (custom fields) is embedded in the Product document,
         // so saving/loading a product carries its metadata in one round trip.

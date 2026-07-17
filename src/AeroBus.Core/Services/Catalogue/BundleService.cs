@@ -1,3 +1,4 @@
+using AeroBus.Core.Data;
 using AeroBus.Core.Events;
 using AeroBus.Core.Model.Catalogue;
 using AeroBus.Core.Repositories.Catalogue;
@@ -34,7 +35,7 @@ namespace AeroBus.Core.Services.Catalogue
             var saved = await _repo.SaveAsync(model, ct);
             var b = saved ?? model;
             await _events.PublishAsync("bundle.changed",
-                new EventSubject("bundles", b.Id.ToString()),
+                new EventSubject(DfCollections.Catalogue.Bundles, b.Id.ToString()),
                 new { id = b.Id, name = b.Name, status = b.Status },
                 b.CompanyId, actor: "bundles", ct);
             return saved;

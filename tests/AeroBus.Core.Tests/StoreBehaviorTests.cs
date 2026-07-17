@@ -1,3 +1,4 @@
+using AeroBus.Core.Data;
 using AeroBus.Core.Model.Catalogue;
 using AeroBus.Core.Repositories.Catalogue;
 using Xunit;
@@ -71,7 +72,7 @@ public class StoreBehaviorTests(DocumentForgeFixture fx)
             });
         }
 
-        var count = await fx.Store.CountAsync("continents",
+        var count = await fx.Store.CountAsync(DfCollections.Catalogue.Continents,
             new Dictionary<string, object?> { ["CompanyId"] = companyId });
         Assert.Equal(3, count);
 
@@ -98,16 +99,16 @@ public class StoreBehaviorTests(DocumentForgeFixture fx)
         }
 
         var filter = new Dictionary<string, object?> { ["CompanyId"] = companyId };
-        var all = await fx.Store.QueryAsync<Continent>("continents", filter);
+        var all = await fx.Store.QueryAsync<Continent>(DfCollections.Catalogue.Continents, filter);
         Assert.Equal(5, all.Count);
 
-        var page2 = await fx.Store.QueryAsync<Continent>("continents", filter, page: 2, size: 2);
+        var page2 = await fx.Store.QueryAsync<Continent>(DfCollections.Catalogue.Continents, filter, page: 2, size: 2);
         Assert.Equal(all.Skip(2).Take(2).Select(c => c.Id), page2.Select(c => c.Id));
 
-        var headOnly = await fx.Store.QueryAsync<Continent>("continents", filter, size: 3);
+        var headOnly = await fx.Store.QueryAsync<Continent>(DfCollections.Catalogue.Continents, filter, size: 3);
         Assert.Equal(all.Take(3).Select(c => c.Id), headOnly.Select(c => c.Id));
 
-        Assert.Empty(await fx.Store.QueryAsync<Continent>("continents", filter, page: 4, size: 2));
+        Assert.Empty(await fx.Store.QueryAsync<Continent>(DfCollections.Catalogue.Continents, filter, page: 4, size: 2));
 
         foreach (var id in ids) await continents.DeleteAsync(id, Guid.Empty);
     }

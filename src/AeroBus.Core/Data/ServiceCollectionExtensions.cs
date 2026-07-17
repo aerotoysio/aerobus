@@ -17,11 +17,15 @@ namespace AeroBus.Core.Data
         public const string RulesClientKey = "documentforge-rules";
 
         /// <summary>
-        /// Keyed-service key for the SHARED control-plane client + store: always the
-        /// server's default database. Home of the tenant registry (organisations)
-        /// and everything read at auth-time or by background services — identity/RBAC,
-        /// API tokens and the events outbox — which therefore can't live in a
-        /// per-tenant database. Injected via
+        /// Keyed-service key for the SHARED control-plane client + store: a fixed
+        /// NAMED database (<see cref="DocumentForgeOptions.ControlDatabase"/>,
+        /// default <c>control</c>, ensured at startup). Home of the tenant registry
+        /// (admin.organisations) and everything read at auth-time or by background
+        /// services — identity/RBAC, API tokens and the events outbox — which
+        /// therefore can't live in a per-tenant database. A named database also
+        /// keeps every control-plane call on DocumentForge's scoped
+        /// <c>db/{name}</c> surface (namespaced collection names are fully
+        /// supported there on all deployed server versions). Injected via
         /// <c>[FromKeyedServices(ControlClientKey)]</c>.
         /// </summary>
         public const string ControlClientKey = "documentforge-control";
@@ -58,15 +62,23 @@ namespace AeroBus.Core.Data
                     sp.GetRequiredService<IOptions<DocumentForgeOptions>>().Value,
                     database: null));
 
-            // Control client + store — fixed default database (the shared control plane).
+            // Control client + store — fixed NAMED control database (created at
+            // startup by ControlDatabaseInitializer).
             services.AddHttpClient(ControlClientKey);
             services.AddKeyedScoped<IDocumentForgeClient>(ControlClientKey, (sp, _) =>
-                new DocumentForgeClient(
+            {
+                var opts = sp.GetRequiredService<IOptions<DocumentForgeOptions>>().Value;
+                return new DocumentForgeClient(
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(ControlClientKey),
-                    sp.GetRequiredService<IOptions<DocumentForgeOptions>>().Value,
-                    database: null));
+                    opts,
+                    database: opts.ControlDatabase);
+            });
             services.AddKeyedScoped<IDocumentStore>(ControlClientKey, (sp, _) =>
                 new DocumentStore(sp.GetRequiredKeyedService<IDocumentForgeClient>(ControlClientKey)));
+
+            // Ensure the control database exists before anything reads it (the
+            // outbox pump and tenant resolution start immediately).
+            services.AddHostedService<ControlDatabaseInitializer>();
 
             return services;
         }

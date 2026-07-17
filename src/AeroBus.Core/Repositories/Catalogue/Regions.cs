@@ -17,7 +17,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class Regions(IDocumentStore store) : DocumentRepository<Region>(store), IRegions
     {
-        protected override string Collection => "regions";
+        protected override string Collection => DfCollections.Catalogue.Regions;
 
         public Task<IReadOnlyList<Region>> GetByCountryAsync(Guid countryId, CancellationToken ct = default) =>
             QueryAsync(Eq("CountryId", countryId), ct: ct);

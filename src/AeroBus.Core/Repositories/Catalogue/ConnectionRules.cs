@@ -33,7 +33,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
     public sealed class ConnectionRules(IDocumentStore store) : DocumentRepository<ConnectionRule>(store), IConnectionRules
     {
-        protected override string Collection => "connectionrules";
+        protected override string Collection => DfCollections.Catalogue.ConnectionRules;
 
         public Task<IReadOnlyList<ConnectionRule>> ListByCompanyAsync(
             Guid companyId,

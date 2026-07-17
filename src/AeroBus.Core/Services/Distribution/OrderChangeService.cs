@@ -1,3 +1,4 @@
+using AeroBus.Core.Data;
 using AeroBus.Core.Events;
 using AeroBus.Core.Model.Distribution;
 using AeroBus.Core.Model.Order;
@@ -146,7 +147,7 @@ namespace AeroBus.Core.Services.Distribution
                 ? "order.cancelled"
                 : "order.changed";
             await _events.PublishAsync(eventType,
-                new EventSubject("orders", updated.Id.ToString()),
+                new EventSubject(DfCollections.Order.Orders, updated.Id.ToString()),
                 new
                 {
                     orderId = updated.OrderId,
@@ -187,7 +188,7 @@ namespace AeroBus.Core.Services.Distribution
                     var result = await _inventory.ReleaseAsync(companyId, flightId, bucket, seats, ct);
                     if (result.Success)
                         await _events.PublishAsync("inventory.adjusted",
-                            new EventSubject("flightinventory", flightId.ToString()),
+                            new EventSubject(DfCollections.Stock.FlightInventory, flightId.ToString()),
                             new { flightId, bucket, delta = seats, reason = "order.cancel" },
                             companyId, actor: "order-change", ct);
                     else

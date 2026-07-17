@@ -18,7 +18,7 @@ namespace AeroBus.Core.Repositories.Catalogue
     public sealed class Layouts(IDocumentStore store) : ILayouts
     {
         private readonly IDocumentStore _store = store;
-        private const string C = "layouts";
+        private const string C = DfCollections.Catalogue.Layouts;
 
         public Task<Layout?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
             _store.GetByIdAsync<Layout>(C, id, ct);

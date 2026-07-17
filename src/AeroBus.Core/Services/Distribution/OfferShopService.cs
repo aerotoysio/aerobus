@@ -1,3 +1,4 @@
+using AeroBus.Core.Data;
 using System.Diagnostics;
 using AeroBus.Core.Common.Cache;
 using AeroBus.Core.Events;
@@ -209,7 +210,7 @@ namespace AeroBus.Core.Services.Distribution
                 response.OfferId = offer.Id;
 
                 await _events.PublishAsync("offer.created",
-                    new EventSubject("offers", offer.Id.ToString()),
+                    new EventSubject(DfCollections.Offer.Offers, offer.Id.ToString()),
                     new
                     {
                         id = offer.Id,

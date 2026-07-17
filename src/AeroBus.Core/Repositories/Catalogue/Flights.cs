@@ -35,7 +35,7 @@ namespace AeroBus.Core.Repositories.Catalogue
     public sealed class Flights(IDocumentStore store) : IFlights
     {
         private readonly IDocumentStore _store = store;
-        private const string C = "flights";
+        private const string C = DfCollections.Catalogue.Flights;
 
         private static string D(DateTime dt) => dt.ToString("o", CultureInfo.InvariantCulture);
 
