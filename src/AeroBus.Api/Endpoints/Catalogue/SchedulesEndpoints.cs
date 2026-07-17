@@ -65,6 +65,9 @@ namespace AeroBus.Api.Endpoints.Catalogue
             {
                 try
                 {
+                    // Default the tenant from the caller's token so clients
+                    // don't have to know it (and Guid.Empty never persists).
+                    schedule = schedule with { CompanyId = user.ResolveCompanyId(schedule.CompanyId) };
                     var saved = await svc.SaveAsync(schedule);
                     return Results.Ok(saved);
                 }

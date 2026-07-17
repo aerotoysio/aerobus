@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using AeroBus.Core.Model.Catalogue;
+using AeroBus.Core.Security;
 using AeroBus.Core.Services.Catalogue;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,9 +28,13 @@ namespace AeroBus.Api.Endpoints.Catalogue
                 return Results.Ok(items);
             });
 
-            group.MapPost("/save", async ([FromBody] MarketZone m, [FromServices] MarketZoneService svc) =>
+            group.MapPost("/save", async ([FromBody] MarketZone m, [FromServices] MarketZoneService svc, ClaimsPrincipal user) =>
             {
-                try { return Results.Ok(await svc.SaveAsync(m)); }
+                try
+                {
+                    m = m with { CompanyId = user.ResolveCompanyId(m.CompanyId) };
+                    return Results.Ok(await svc.SaveAsync(m));
+                }
                 catch (Exception ex) { return Results.BadRequest(ex.Message); }
             });
 
