@@ -13,6 +13,19 @@ namespace AeroBus.Core.Security
             return id;
         }
 
+        /// <summary>
+        /// Company id to persist on a posted document: the document's own id
+        /// when present, otherwise the caller's companyId claim. Guards against
+        /// saving documents with CompanyId = Guid.Empty, which no tenant-scoped
+        /// query can see.
+        /// </summary>
+        public static Guid ResolveCompanyId(this ClaimsPrincipal user, Guid? documentCompanyId)
+        {
+            return documentCompanyId is { } id && id != Guid.Empty
+                ? id
+                : user.GetCompanyId();
+        }
+
         public static Guid GetWorkspaceId(this ClaimsPrincipal user)
         {
             var val = user.FindFirstValue("workspaceId");

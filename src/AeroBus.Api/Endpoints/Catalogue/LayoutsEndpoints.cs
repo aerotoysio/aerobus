@@ -63,6 +63,7 @@ namespace AeroBus.Api.Endpoints.Catalogue
             {
                 try
                 {
+                    layout = layout with { CompanyId = user.ResolveCompanyId(layout.CompanyId) };
                     var saved = await svc.SaveAsync(layout);
                     return Results.Ok(saved);
                 }

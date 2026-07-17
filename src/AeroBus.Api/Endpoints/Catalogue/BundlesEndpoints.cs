@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AeroBus.Core.Model.Catalogue;
+using AeroBus.Core.Security;
 using AeroBus.Core.Services.Catalogue;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,7 +42,11 @@ namespace AeroBus.Api.Endpoints.Catalogue
 
             group.MapPost("/save", async ([FromBody] Bundle m, [FromServices] BundleService svc, ClaimsPrincipal user) =>
             {
-                try { return Results.Ok(await svc.SaveAsync(m)); }
+                try
+                {
+                    m = m with { CompanyId = user.ResolveCompanyId(m.CompanyId) };
+                    return Results.Ok(await svc.SaveAsync(m));
+                }
                 catch (Exception ex) { return Results.BadRequest(ex.Message); }
             });
 

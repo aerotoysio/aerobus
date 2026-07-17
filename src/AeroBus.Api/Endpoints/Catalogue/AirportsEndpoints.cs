@@ -44,6 +44,7 @@ namespace AeroBus.Api.Endpoints.Catalogue
             {
                 try
                 {
+                    a = a with { CompanyId = user.ResolveCompanyId(a.CompanyId) };
                     return Results.Ok(await svc.SaveAsync(a));
                 }
                 catch (Exception ex)

@@ -71,6 +71,7 @@ namespace AeroBus.Api.Endpoints.Catalogue
             {
                 try
                 {
+                    region = region with { CompanyId = user.ResolveCompanyId(region.CompanyId) };
                     var saved = await svc.SaveAsync(region);
                     return Results.Ok(saved);
                 }
