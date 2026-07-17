@@ -58,8 +58,15 @@ namespace AeroBus.Core.Services.Operations
             return ordered;
         }
 
-        public Task<Flight?> GetFlightAsync(Guid companyId, Guid flightId, CancellationToken ct = default) =>
-            GetOwnedAsync(companyId, flightId, ct);
+        public async Task<Flight?> GetFlightAsync(Guid companyId, Guid flightId, CancellationToken ct = default)
+        {
+            var flight = await GetOwnedAsync(companyId, flightId, ct);
+            if (flight is null) return null;
+            // Always recompute: a Counters value embedded in the stored document is
+            // a stale snapshot (see ChangeStatusAsync) — flightinventory is the truth.
+            flight.Counters = await LoadCountersAsync(flight.Id, ct);
+            return flight;
+        }
 
         /// <summary>Advance a flight's operational status through the state machine
         /// and emit the operational event. Depart uses <c>flight.departed</c>;
@@ -77,7 +84,9 @@ namespace AeroBus.Core.Services.Operations
                     $"Cannot '{action}' a flight in '{from}' status.",
                     FlightStateMachine.GetAvailableActions(from));
 
-            var updated = flight with { Status = to, Updated = DateTime.UtcNow };
+            // Never persist Counters — it's a computed view over flightinventory, and
+            // writing a snapshot into the flight document serves stale numbers later.
+            var updated = flight with { Status = to, Updated = DateTime.UtcNow, Counters = null };
             var saved = await _flights.SaveAsync(updated, ct) ?? updated;
 
             var type = action == FlightStateMachine.Action.Depart ? "flight.departed" : "flight.status-changed";
