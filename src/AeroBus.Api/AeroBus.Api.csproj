@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -7,6 +7,7 @@
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <!-- XML docs are for the API surface reference, not a per-member mandate. -->
     <NoWarn>$(NoWarn);1591</NoWarn>
+    <UserSecretsId>8233cdb6-b321-4a65-9260-49e8fe530a27</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
