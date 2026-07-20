@@ -59,11 +59,17 @@ org is onboarded.
 - **What's per-tenant vs shared.** The airline's business data (companies,
   catalogue, orders, customers, offers, stock, checkins) lives in its own database
   — full physical separation. A small set of collections read *at auth-time or by
-  background jobs* stays in the **shared control database** (a named `control` database, ensured at startup) because there's no
-  resolved tenant DB at that moment: the org registry, identity/RBAC
-  (`identity.orgroles`/`identity.orgroleassignments`/`identity.userprofiles`), `admin.apitokens`, the events outbox,
-  and rules. These still carry `companyId` for scoping. (RBAC/tokens are candidates
-  to move fully into Keycloak later.)
+  background jobs* stays in the **shared control database** (a named `control`
+  database, ensured at startup) because there's no resolved tenant DB at that
+  moment: the org registry, identity/RBAC
+  (`identity.orgroles`/`identity.orgroleassignments`/`identity.userprofiles`),
+  `admin.apitokens`, the events outbox, and rules. These still carry `companyId`
+  for scoping. (RBAC/tokens are candidates to move fully into Keycloak later.)
+- **Storage convention.** Collections are namespaced `<module>.<name>`
+  (`catalogue.flights`, `orders.orders` — see `Data/DfCollections.cs`) and document
+  fields are **camelCase** (`id`, `companyId`, `flightNumber`), matching the HTTP
+  wire, PolicyStudio and the RuleForge contract. The camelCase policy lives in one
+  place (`DocumentStore`); .NET models stay PascalCase.
 
 Deferred follow-ons: per-org **rules** (RuleForge tenant-awareness) and **events**
 (a tenant-iterating dispatcher), a durable per-org **order-sequence counter**

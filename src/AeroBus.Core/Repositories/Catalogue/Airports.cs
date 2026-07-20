@@ -24,7 +24,7 @@ namespace AeroBus.Core.Repositories.Catalogue
             // NOTE: free-text `search` is not yet applied (DocumentForge equality
             // can't do LIKE); the relational path ignored it too. Revisit if the
             // admin needs server-side airport search across the ~9k rows.
-            QueryAsync(Eq("CompanyId", companyId), pageNumber, pageSize, ct);
+            QueryAsync(Eq("companyId", companyId), pageNumber, pageSize, ct);
 
         public Task<bool> DeleteAsync(Guid id, Guid concurrencyId, CancellationToken ct = default) =>
             base.DeleteAsync(id, ct);

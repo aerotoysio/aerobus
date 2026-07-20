@@ -51,16 +51,22 @@ namespace AeroBus.Core.Data
 
     public sealed class DocumentStore(IDocumentForgeClient client) : IDocumentStore
     {
+        // Storage convention: documents are persisted with camelCase keys
+        // (id, companyId, …) — matching the HTTP wire, PolicyStudio and the
+        // RuleForge contract. Case-insensitive reads keep the PascalCase .NET
+        // models hydrating unchanged. Every field name interpolated into SQL /
+        // filters / CAS must therefore be written camelCase too.
         private static readonly JsonSerializerOptions Json = new()
         {
             PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
 
         private readonly IDocumentForgeClient _client = client;
 
         public async Task<T?> GetByIdAsync<T>(string collection, Guid id, CancellationToken ct = default)
         {
-            var el = await _client.GetByFieldAsync(collection, "Id", id.ToString(), ct);
+            var el = await _client.GetByFieldAsync(collection, "id", id.ToString(), ct);
             return el is { } e ? e.Deserialize<T>(Json) : default;
         }
 
@@ -142,28 +148,28 @@ namespace AeroBus.Core.Data
             if (id == Guid.Empty)
             {
                 id = Guid.NewGuid();
-                node["Id"] = id.ToString();
+                node["id"] = id.ToString();
             }
 
             // Stamp audit fields where the document carries them: Updated on every
             // write; Created is preserved from the stored document when the caller
             // omits it (a full-document admin edit must not wipe the Created date).
-            var existing = await _client.GetByFieldAsync(collection, "Id", id.ToString(), ct);
+            var existing = await _client.GetByFieldAsync(collection, "id", id.ToString(), ct);
             var now = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
-            if (!node.TryGetPropertyValue("Created", out var created) || created is null)
+            if (!node.TryGetPropertyValue("created", out var created) || created is null)
             {
                 string? preserved = null;
                 if (existing is { } prev &&
-                    prev.TryGetProperty("Created", out var prevCreated) &&
+                    prev.TryGetProperty("created", out var prevCreated) &&
                     prevCreated.ValueKind == JsonValueKind.String)
                     preserved = prevCreated.GetString();
-                node["Created"] = preserved ?? now;
+                node["created"] = preserved ?? now;
             }
-            node["Updated"] = now;
+            node["updated"] = now;
 
             var json = node.ToJsonString();
             if (existing is not null)
-                await _client.ReplaceByFieldAsync(collection, "Id", id.ToString(), json, ct);
+                await _client.ReplaceByFieldAsync(collection, "id", id.ToString(), json, ct);
             else
                 await _client.InsertAsync(collection, json, ct);
 
@@ -171,7 +177,7 @@ namespace AeroBus.Core.Data
         }
 
         public Task<bool> DeleteAsync(string collection, Guid id, CancellationToken ct = default) =>
-            _client.DeleteByFieldAsync(collection, "Id", id.ToString(), ct);
+            _client.DeleteByFieldAsync(collection, "id", id.ToString(), ct);
 
         // ── SQL helpers ────────────────────────────────────────────────────────
 

@@ -73,7 +73,7 @@ public class StoreBehaviorTests(DocumentForgeFixture fx)
         }
 
         var count = await fx.Store.CountAsync(DfCollections.Catalogue.Continents,
-            new Dictionary<string, object?> { ["CompanyId"] = companyId });
+            new Dictionary<string, object?> { ["companyId"] = companyId });
         Assert.Equal(3, count);
 
         foreach (var id in ids) await continents.DeleteAsync(id, Guid.Empty);
@@ -98,7 +98,7 @@ public class StoreBehaviorTests(DocumentForgeFixture fx)
             });
         }
 
-        var filter = new Dictionary<string, object?> { ["CompanyId"] = companyId };
+        var filter = new Dictionary<string, object?> { ["companyId"] = companyId };
         var all = await fx.Store.QueryAsync<Continent>(DfCollections.Catalogue.Continents, filter);
         Assert.Equal(5, all.Count);
 
@@ -122,28 +122,28 @@ public class StoreBehaviorTests(DocumentForgeFixture fx)
         var collection = "cas_" + Guid.NewGuid().ToString("N");
 
         // Insert directly and query back to learn DocumentForge's internal _id.
-        await fx.Client.InsertAsync(collection, """{ "Name": "counter", "Available": 2, "Sold": 0 }""");
+        await fx.Client.InsertAsync(collection, """{ "name": "counter", "available": 2, "sold": 0 }""");
         var rows = await fx.Client.QueryAsync($"SELECT * FROM {collection}");
         var row = Assert.Single(rows);
         var dfId = row.GetProperty("_id").GetString()!;
 
         // Sell one seat: guard Available >= 1 holds.
         var ok = await fx.Client.ConditionalUpdateAsync(collection, dfId,
-            [new("Available", ">=", 1)],
-            [new("Available", "dec", 1), new("Sold", "inc", 1)]);
+            [new("available", ">=", 1)],
+            [new("available", "dec", 1), new("sold", "inc", 1)]);
         Assert.True(ok.Success);
 
         // Sell two more: guard Available >= 2 fails (only 1 left) — no write.
         var conflict = await fx.Client.ConditionalUpdateAsync(collection, dfId,
-            [new("Available", ">=", 2)],
-            [new("Available", "dec", 2), new("Sold", "inc", 2)]);
+            [new("available", ">=", 2)],
+            [new("available", "dec", 2), new("sold", "inc", 2)]);
         Assert.False(conflict.Success);
         Assert.Equal(409, conflict.StatusCode);
 
         var after = Assert.Single(await fx.Client.QueryAsync($"SELECT * FROM {collection}"));
-        Assert.Equal(1, after.GetProperty("Available").GetInt32());
-        Assert.Equal(1, after.GetProperty("Sold").GetInt32());
+        Assert.Equal(1, after.GetProperty("available").GetInt32());
+        Assert.Equal(1, after.GetProperty("sold").GetInt32());
 
-        await fx.Client.DeleteByFieldAsync(collection, "Name", "counter");
+        await fx.Client.DeleteByFieldAsync(collection, "name", "counter");
     }
 }

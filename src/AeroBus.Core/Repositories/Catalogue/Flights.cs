@@ -43,30 +43,30 @@ namespace AeroBus.Core.Repositories.Catalogue
             _store.GetByIdAsync<Flight>(C, id, ct);
 
         public Task<IReadOnlyList<Flight>> GetByScheduleIdAsync(Guid scheduleId, CancellationToken ct = default) =>
-            _store.QueryAsync<Flight>(C, new Dictionary<string, object?> { ["ScheduleId"] = scheduleId }, ct: ct);
+            _store.QueryAsync<Flight>(C, new Dictionary<string, object?> { ["scheduleId"] = scheduleId }, ct: ct);
 
         public Task<IReadOnlyList<Flight>> GetByCompanyAsync(Guid companyId, CancellationToken ct = default) =>
-            _store.QueryAsync<Flight>(C, new Dictionary<string, object?> { ["CompanyId"] = companyId }, ct: ct);
+            _store.QueryAsync<Flight>(C, new Dictionary<string, object?> { ["companyId"] = companyId }, ct: ct);
 
         public Task<IReadOnlyList<Flight>> LoadByCompanyAsync(Guid companyId, int pageNumber, int pageSize, CancellationToken ct = default) =>
-            _store.QueryAsync<Flight>(C, new Dictionary<string, object?> { ["CompanyId"] = companyId }, pageNumber, pageSize, ct);
+            _store.QueryAsync<Flight>(C, new Dictionary<string, object?> { ["companyId"] = companyId }, pageNumber, pageSize, ct);
 
         public Task<IReadOnlyList<Flight>> ListByCompanyAsync(
             Guid companyId, string? status, string? departureStation, string? arrivalStation,
             string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { ["CompanyId"] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f["Status"] = status;
-            if (!string.IsNullOrWhiteSpace(departureStation)) f["DepartureStation"] = departureStation;
-            if (!string.IsNullOrWhiteSpace(arrivalStation)) f["ArrivalStation"] = arrivalStation;
+            var f = new Dictionary<string, object?> { ["companyId"] = companyId };
+            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
+            if (!string.IsNullOrWhiteSpace(departureStation)) f["departureStation"] = departureStation;
+            if (!string.IsNullOrWhiteSpace(arrivalStation)) f["arrivalStation"] = arrivalStation;
             return _store.QueryAsync<Flight>(C, f, pageNumber, pageSize, ct);
         }
 
         public Task<IReadOnlyList<Flight>> GetByFullRangeAsync(
             Guid companyId, string? status, DateTime fromUtc, DateTime toUtc, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var where = $"CompanyId = '{companyId}' AND DepartureDateTime >= '{D(fromUtc)}' AND DepartureDateTime <= '{D(toUtc)}'";
-            if (!string.IsNullOrWhiteSpace(status)) where += $" AND Status = '{status.Replace("'", "''")}'";
+            var where = $"companyId = '{companyId}' AND departureDateTime >= '{D(fromUtc)}' AND departureDateTime <= '{D(toUtc)}'";
+            if (!string.IsNullOrWhiteSpace(status)) where += $" AND status = '{status.Replace("'", "''")}'";
             return _store.QueryWhereAsync<Flight>(C, where, pageNumber, pageSize, ct);
         }
 
@@ -77,22 +77,22 @@ namespace AeroBus.Core.Repositories.Catalogue
         public Task<IReadOnlyList<Flight>> FindDeparturesAsync(
             Guid companyId, string departureStation, DateTime fromLocal, DateTime toLocal, string? status, CancellationToken ct = default)
         {
-            var where = $"CompanyId = '{companyId}' AND DepartureStation = '{departureStation.Replace("'", "''")}' AND DepartureDateTimeLocal >= '{D(fromLocal)}' AND DepartureDateTimeLocal <= '{D(toLocal)}'";
-            if (!string.IsNullOrWhiteSpace(status)) where += $" AND Status = '{status.Replace("'", "''")}'";
+            var where = $"companyId = '{companyId}' AND departureStation = '{departureStation.Replace("'", "''")}' AND departureDateTimeLocal >= '{D(fromLocal)}' AND departureDateTimeLocal <= '{D(toLocal)}'";
+            if (!string.IsNullOrWhiteSpace(status)) where += $" AND status = '{status.Replace("'", "''")}'";
             return _store.QueryWhereAsync<Flight>(C, where, ct: ct);
         }
 
         public Task<IReadOnlyList<Flight>> FindByLocalRangeAsync(
             Guid companyId, string departureStation, string arrivalStation, DateTime fromLocal, DateTime toLocal, CancellationToken ct = default)
         {
-            var where = $"CompanyId = '{companyId}' AND DepartureStation = '{departureStation.Replace("'", "''")}' AND ArrivalStation = '{arrivalStation.Replace("'", "''")}' AND DepartureDateTimeLocal >= '{D(fromLocal)}' AND DepartureDateTimeLocal <= '{D(toLocal)}'";
+            var where = $"companyId = '{companyId}' AND departureStation = '{departureStation.Replace("'", "''")}' AND arrivalStation = '{arrivalStation.Replace("'", "''")}' AND departureDateTimeLocal >= '{D(fromLocal)}' AND departureDateTimeLocal <= '{D(toLocal)}'";
             return _store.QueryWhereAsync<Flight>(C, where, ct: ct);
         }
 
         public Task<IReadOnlyList<Flight>> FindByUtcRangeAsync(
             Guid companyId, string departureStation, string arrivalStation, DateTime fromUtc, DateTime toUtc, CancellationToken ct = default)
         {
-            var where = $"CompanyId = '{companyId}' AND DepartureStation = '{departureStation.Replace("'", "''")}' AND ArrivalStation = '{arrivalStation.Replace("'", "''")}' AND DepartureDateTime >= '{D(fromUtc)}' AND DepartureDateTime <= '{D(toUtc)}'";
+            var where = $"companyId = '{companyId}' AND departureStation = '{departureStation.Replace("'", "''")}' AND arrivalStation = '{arrivalStation.Replace("'", "''")}' AND departureDateTime >= '{D(fromUtc)}' AND departureDateTime <= '{D(toUtc)}'";
             return _store.QueryWhereAsync<Flight>(C, where, ct: ct);
         }
 
@@ -100,10 +100,10 @@ namespace AeroBus.Core.Repositories.Catalogue
             Guid companyId, string? status, string? departureStation, string? arrivalStation,
             string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { ["CompanyId"] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f["Status"] = status;
-            if (!string.IsNullOrWhiteSpace(departureStation)) f["DepartureStation"] = departureStation;
-            if (!string.IsNullOrWhiteSpace(arrivalStation)) f["ArrivalStation"] = arrivalStation;
+            var f = new Dictionary<string, object?> { ["companyId"] = companyId };
+            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
+            if (!string.IsNullOrWhiteSpace(departureStation)) f["departureStation"] = departureStation;
+            if (!string.IsNullOrWhiteSpace(arrivalStation)) f["arrivalStation"] = arrivalStation;
             var items = await _store.QueryAsync<Flight>(C, f, pageNumber, pageSize, ct);
             var total = await _store.CountAsync(C, f, ct);
             return new PagedResult<Flight> { Items = items, TotalCount = total, PageNumber = pageNumber, PageSize = pageSize };

@@ -28,7 +28,7 @@ namespace AeroBus.Core.Repositories.Catalogue
         protected override string Collection => DfCollections.Catalogue.Bundles;
 
         public Task<IReadOnlyList<Bundle>> GetPrettyByCompanyAsync(Guid companyId, CancellationToken ct = default) =>
-            QueryAsync(Eq("CompanyId", companyId), ct: ct);
+            QueryAsync(Eq("companyId", companyId), ct: ct);
 
         public Task<IReadOnlyList<Bundle>> SearchAsync(
             Guid? companyId = null,
@@ -41,10 +41,10 @@ namespace AeroBus.Core.Repositories.Catalogue
             CancellationToken ct = default)
         {
             var f = new Dictionary<string, object?>();
-            if (companyId is { } cid) f["CompanyId"] = cid;
-            if (!string.IsNullOrWhiteSpace(status)) f["Status"] = status;
-            if (!string.IsNullOrWhiteSpace(type)) f["Type"] = type;
-            if (!string.IsNullOrWhiteSpace(category)) f["Category"] = category;
+            if (companyId is { } cid) f["companyId"] = cid;
+            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
+            if (!string.IsNullOrWhiteSpace(type)) f["type"] = type;
+            if (!string.IsNullOrWhiteSpace(category)) f["category"] = category;
             return QueryAsync(f, pageNumber, pageSize, ct);
         }
 

@@ -16,7 +16,7 @@ namespace AeroBus.Core.Repositories.Distribution
         protected override string Collection => DfCollections.Offer.Offers;
 
         public Task<IReadOnlyList<Offer>> GetBySearchAsync(Guid searchId, CancellationToken ct = default) =>
-            QueryAsync(Eq("SearchId", searchId), ct: ct);
+            QueryAsync(Eq("searchId", searchId), ct: ct);
 
         // events: offer.created via outbox in Phase 6
     }

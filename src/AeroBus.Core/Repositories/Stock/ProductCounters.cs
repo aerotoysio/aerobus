@@ -22,9 +22,9 @@ namespace AeroBus.Core.Repositories.Stock
         {
             var matches = await QueryAsync(new Dictionary<string, object?>
             {
-                ["CompanyId"] = companyId,
-                ["Sku"] = sku,
-                ["Bucket"] = bucket,
+                ["companyId"] = companyId,
+                ["sku"] = sku,
+                ["bucket"] = bucket,
             }, ct: ct);
             return matches.Count > 0 ? matches[0] : null;
         }

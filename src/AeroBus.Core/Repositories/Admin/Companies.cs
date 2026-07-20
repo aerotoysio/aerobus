@@ -26,7 +26,7 @@ namespace AeroBus.Core.Repositories.Admin
                 return null;
 
             var configs = await Store.QueryAsync<CompanyConfig>(
-                DfCollections.Admin.CompanyConfigs, Eq("CompanyId", id), ct: ct);
+                DfCollections.Admin.CompanyConfigs, Eq("companyId", id), ct: ct);
 
             company.Configs = configs.ToList();
 
@@ -34,7 +34,7 @@ namespace AeroBus.Core.Repositories.Admin
         }
 
         public Task<Company?> GetBySlugAsync(string slug, CancellationToken ct = default) =>
-            GetByFieldAsync("Slug", slug, ct);
+            GetByFieldAsync("slug", slug, ct);
 
         public Task<IReadOnlyList<Company>> GetAllAsync(CancellationToken ct = default) =>
             ListAsync(ct: ct);
