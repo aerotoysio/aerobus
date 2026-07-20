@@ -63,11 +63,17 @@ namespace AeroBus.Core.Repositories.Catalogue
             Guid companyId, string? status, string? departureStation, string? arrivalStation,
             string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { [Df.Field(nameof(Flight.CompanyId))] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(Flight.Status))] = status;
-            if (!string.IsNullOrWhiteSpace(departureStation)) f[Df.Field(nameof(Flight.DepartureStation))] = departureStation;
-            if (!string.IsNullOrWhiteSpace(arrivalStation)) f[Df.Field(nameof(Flight.ArrivalStation))] = arrivalStation;
-            return _store.QueryAsync<Flight>(C, f, pageNumber, pageSize, ct);
+            var where = $"{FCompany} = '{companyId}'";
+            if (!string.IsNullOrWhiteSpace(status))
+                where += $" AND {FStatus} = '{status.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(departureStation))
+                where += $" AND {FDepStation} = '{departureStation.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(arrivalStation))
+                where += $" AND {FArrStation} = '{arrivalStation.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(search))
+                where += " AND " + Df.Match(search,
+                    Df.Field(nameof(Flight.FlightNumber)), FDepStation, FArrStation);
+            return _store.QueryWhereAsync<Flight>(C, where, pageNumber, pageSize, ct);
         }
 
         public Task<IReadOnlyList<Flight>> GetByFullRangeAsync(

@@ -46,12 +46,20 @@ namespace AeroBus.Core.Repositories.Catalogue
             Guid companyId, string? status, string? carrierCode, string? departureStation, string? arrivalStation,
             string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { [Df.Field(nameof(Schedule.CompanyId))] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(Schedule.Status))] = status;
-            if (!string.IsNullOrWhiteSpace(carrierCode)) f[Df.Field(nameof(Schedule.CarrierCode))] = carrierCode;
-            if (!string.IsNullOrWhiteSpace(departureStation)) f[Df.Field(nameof(Schedule.DepartureStation))] = departureStation;
-            if (!string.IsNullOrWhiteSpace(arrivalStation)) f[Df.Field(nameof(Schedule.ArrivalStation))] = arrivalStation;
-            return _store.QueryAsync<Schedule>(C, f, pageNumber, pageSize, ct);
+            var where = $"{Df.Field(nameof(Schedule.CompanyId))} = '{companyId}'";
+            if (!string.IsNullOrWhiteSpace(status))
+                where += $" AND {Df.Field(nameof(Schedule.Status))} = '{status.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(carrierCode))
+                where += $" AND {Df.Field(nameof(Schedule.CarrierCode))} = '{carrierCode.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(departureStation))
+                where += $" AND {Df.Field(nameof(Schedule.DepartureStation))} = '{departureStation.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(arrivalStation))
+                where += $" AND {Df.Field(nameof(Schedule.ArrivalStation))} = '{arrivalStation.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(search))
+                where += " AND " + Df.Match(search,
+                    Df.Field(nameof(Schedule.FlightNumber)), Df.Field(nameof(Schedule.CarrierCode)),
+                    Df.Field(nameof(Schedule.DepartureStation)), Df.Field(nameof(Schedule.ArrivalStation)));
+            return _store.QueryWhereAsync<Schedule>(C, where, pageNumber, pageSize, ct);
         }
 
         public async Task<Schedule?> SaveAsync(Schedule m, CancellationToken ct = default) =>
