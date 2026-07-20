@@ -47,6 +47,7 @@ namespace AeroBus.Core.Data
         {
             public const string Companies = "admin.companies";
             public const string CompanyConfigs = "admin.companyconfigs";
+            public const string PlatformConfig = "admin.platformconfig";
             public const string Workspaces = "admin.workspaces";
             public const string ApiTokens = "admin.apitokens";
             public const string Organisations = "admin.organisations";

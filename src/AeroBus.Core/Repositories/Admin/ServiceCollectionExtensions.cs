@@ -32,6 +32,14 @@ namespace AeroBus.Core.Repositories.Admin
             services.AddScoped<ICompanyConfigs, CompanyConfigs>();
             services.AddScoped<CompanyConfigService>();
 
+            // Platform settings live in the control DATABASE (secrets encrypted
+            // via Data Protection); appsettings keeps only the Keycloak +
+            // DocumentForge bootstrap. AddDataProtection is idempotent.
+            services.AddDataProtection();
+            services.AddScoped<IPlatformConfigs, PlatformConfigs>();
+            services.AddScoped<Services.Admin.PlatformConfigService>();
+            services.AddHostedService<Services.Admin.PlatformConfigSeeder>();
+
             services.AddScoped<IWorkspaces, Workspaces>();
             services.AddScoped<WorkspaceService>();
 

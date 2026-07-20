@@ -35,6 +35,9 @@ namespace AeroBus.Api.Bootstrap
             app.MapGroup("/admin/companies/config").WithTags("Admin").AdminCompanyConfigMapping();
             app.MapGroup("/admin/workspaces").WithTags("Admin").AdminWorkspacesMapping();
 
+            // Platform settings (control database) — platform staff only.
+            app.MapGroup("/admin/platform-config").WithTags("Admin").AdminPlatformConfigMapping().RequireAuthorization("admin.all");
+
             // Demo-airline seed for the onboarding welcome flow — org admins only.
             app.MapGroup("/admin/demo-seed").WithTags("Admin").DemoSeedMapping().RequireAuthorization("org.manage");
 

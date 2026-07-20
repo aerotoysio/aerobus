@@ -21,6 +21,9 @@ namespace AeroBus.Core.Rules
                 if (modes is not null) opts.FailureModes = modes;
             });
 
+            // Connection settings resolve per call from platform config
+            // (database-held, admin-editable) with this section as bootstrap.
+            services.AddScoped<IRuleForgeSettingsProvider, PlatformRuleForgeSettingsProvider>();
             services.AddHttpClient<IRuleForgeClient, RuleForgeClient>();
             services.AddScoped<DecisionRunner>();
             return services;
