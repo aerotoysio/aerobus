@@ -106,7 +106,7 @@ namespace AeroBus.Core.Services.Admin
             foreach (var a in Definition.Value.Airports)
             {
                 var existing = await _store.CountAsync(DfCollections.Catalogue.Airports,
-                    new Dictionary<string, object?> { ["companyId"] = companyId, ["code"] = a.Code }, ct);
+                    new Dictionary<string, object?> { [Df.CompanyId] = companyId, [Df.Field(nameof(Airport.Code))] = a.Code }, ct);
                 if (existing > 0) continue;
 
                 var airport = new Airport
@@ -128,7 +128,7 @@ namespace AeroBus.Core.Services.Admin
             foreach (var e in Definition.Value.Equipment)
             {
                 var existing = await _store.CountAsync(DfCollections.Catalogue.Equipment,
-                    new Dictionary<string, object?> { ["companyId"] = companyId, ["equipmentCode"] = e.Code }, ct);
+                    new Dictionary<string, object?> { [Df.CompanyId] = companyId, [Df.Field(nameof(Model.Catalogue.Equipment.EquipmentCode))] = e.Code }, ct);
                 if (existing > 0) continue;
 
                 var equipment = new Equipment
@@ -163,7 +163,7 @@ namespace AeroBus.Core.Services.Admin
 
                 var existing = await _store.CountAsync(DfCollections.Catalogue.Schedules, new Dictionary<string, object?>
                 {
-                    ["companyId"] = companyId, ["flightNumber"] = f.Number, ["departureStation"] = from,
+                    [Df.CompanyId] = companyId, [Df.Field(nameof(Schedule.FlightNumber))] = f.Number, [Df.Field(nameof(Schedule.DepartureStation))] = from,
                 }, ct);
                 if (existing > 0) continue;
 
@@ -203,7 +203,7 @@ namespace AeroBus.Core.Services.Admin
         private async Task<DemoSeedResult> BuildFlightsAsync(Guid companyId, CancellationToken ct)
         {
             var schedules = await _store.QueryAsync<Schedule>(DfCollections.Catalogue.Schedules,
-                new Dictionary<string, object?> { ["companyId"] = companyId, ["tags"] = DemoTag }, ct: ct);
+                new Dictionary<string, object?> { [Df.CompanyId] = companyId, [Df.Field(nameof(Schedule.Tags))] = DemoTag }, ct: ct);
 
             var built = 0;
             foreach (var schedule in schedules.Where(s => !string.Equals(s.Status, "Built", StringComparison.OrdinalIgnoreCase)))
@@ -227,10 +227,10 @@ namespace AeroBus.Core.Services.Admin
         // ─── the flat seed definition ───────────────────────────────────────────
 
         private static Dictionary<string, object?> ByCompany(Guid companyId) =>
-            new() { ["companyId"] = companyId };
+            new() { [Df.CompanyId] = companyId };
 
         private static Dictionary<string, object?> ByDemo(Guid companyId) =>
-            new() { ["companyId"] = companyId, ["tags"] = DemoTag };
+            new() { [Df.CompanyId] = companyId, [Df.Field(nameof(Schedule.Tags))] = DemoTag };
 
         private static readonly Lazy<SeedFile> Definition = new(Load);
 

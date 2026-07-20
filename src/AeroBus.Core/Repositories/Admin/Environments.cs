@@ -18,7 +18,7 @@ namespace AeroBus.Core.Repositories.Admin
         public Task<IReadOnlyList<Model.Admin.Environment>> ListAsync(Guid? companyId = null, CancellationToken ct = default)
         {
             var f = new Dictionary<string, object?>();
-            if (companyId is { } cid) f["companyId"] = cid;
+            if (companyId is { } cid) f[Df.Field(nameof(Model.Admin.Environment.CompanyId))] = cid;
             return QueryAsync(f, ct: ct);
         }
 

@@ -22,7 +22,7 @@ namespace AeroBus.Core.Repositories.Stock
         protected override string Collection => DfCollections.Stock.FlightInventory;
 
         public Task<IReadOnlyList<FlightInventory>> GetByFlightAsync(Guid flightId, CancellationToken ct = default) =>
-            QueryAsync(Eq("flightId", flightId), ct: ct);
+            QueryAsync(Eq(Df.Field(nameof(FlightInventory.FlightId)), flightId), ct: ct);
 
         public Task<bool> DeleteAsync(Guid id, Guid concurrencyId, CancellationToken ct = default) =>
             base.DeleteAsync(id, ct);

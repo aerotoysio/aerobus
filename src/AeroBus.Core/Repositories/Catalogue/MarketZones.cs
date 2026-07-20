@@ -25,8 +25,8 @@ namespace AeroBus.Core.Repositories.Catalogue
             Guid? companyId, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
             var f = new Dictionary<string, object?>();
-            if (companyId is { } cid) f["companyId"] = cid;
-            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
+            if (companyId is { } cid) f[Df.Field(nameof(MarketZone.CompanyId))] = cid;
+            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(MarketZone.Status))] = status;
             return QueryAsync(f, pageNumber, pageSize, ct);
         }
 

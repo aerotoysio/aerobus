@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using AeroBus.Core.Data;
+using AeroBus.Core.Model.Stock;
 using Microsoft.Extensions.Logging;
 
 namespace AeroBus.Core.Services.Stock
@@ -58,6 +59,12 @@ namespace AeroBus.Core.Services.Stock
     public sealed class InventoryService : IInventoryService
     {
         private const string Collection = DfCollections.Stock.FlightInventory;
+
+        // Stored (camelCase) field names, derived from the model so renames break the build.
+        private static readonly string FAvailable = Df.Field(nameof(FlightInventory.Available));
+        private static readonly string FSold = Df.Field(nameof(FlightInventory.Sold));
+        private static readonly string FFlightId = Df.Field(nameof(FlightInventory.FlightId));
+        private static readonly string FBucket = Df.Field(nameof(FlightInventory.Bucket));
         private static readonly TimeSpan IdCacheTtl = TimeSpan.FromSeconds(30);
 
         // (FlightId,Bucket) → DocumentForge _id, shared process-wide (singleton) so
@@ -89,18 +96,18 @@ namespace AeroBus.Core.Services.Stock
 
             // sell:    guard Available >= qty,  ops: dec Available, inc Sold
             // release: guard Sold      >= qty,  ops: inc Available, dec Sold
-            var guardField = sell ? "available" : "sold";
+            var guardField = sell ? FAvailable : FSold;
             var conditions = new[] { new DocumentForgeCondition(guardField, ">=", qty) };
             var operations = sell
                 ? new[]
                 {
-                    new DocumentForgeMutation("available", "dec", qty),
-                    new DocumentForgeMutation("sold", "inc", qty),
+                    new DocumentForgeMutation(FAvailable, "dec", qty),
+                    new DocumentForgeMutation(FSold, "inc", qty),
                 }
                 : new[]
                 {
-                    new DocumentForgeMutation("available", "inc", qty),
-                    new DocumentForgeMutation("sold", "dec", qty),
+                    new DocumentForgeMutation(FAvailable, "inc", qty),
+                    new DocumentForgeMutation(FSold, "dec", qty),
                 };
 
             // Resolve the internal _id (cached), then conditional-update. On a 404
@@ -173,7 +180,7 @@ namespace AeroBus.Core.Services.Stock
             var flightLit = flightId.ToString().Replace("'", "''");
             var bucketLit = bucket.Replace("'", "''");
             var rows = await _df.QueryAsync(
-                $"SELECT * FROM {Collection} WHERE flightId = '{flightLit}' AND bucket = '{bucketLit}'", ct);
+                $"SELECT * FROM {Collection} WHERE {FFlightId} = '{flightLit}' AND {FBucket} = '{bucketLit}'", ct);
 
             if (rows.Count == 0)
             {
@@ -198,9 +205,9 @@ namespace AeroBus.Core.Services.Stock
             var flightLit = flightId.ToString().Replace("'", "''");
             var bucketLit = bucket.Replace("'", "''");
             var rows = await _df.QueryAsync(
-                $"SELECT * FROM {Collection} WHERE flightId = '{flightLit}' AND bucket = '{bucketLit}'", ct);
+                $"SELECT * FROM {Collection} WHERE {FFlightId} = '{flightLit}' AND {FBucket} = '{bucketLit}'", ct);
             if (rows.Count == 0) return 0;
-            return rows[0].TryGetProperty("available", out var availEl) && availEl.ValueKind == JsonValueKind.Number
+            return rows[0].TryGetProperty(FAvailable, out var availEl) && availEl.ValueKind == JsonValueKind.Number
                 ? availEl.GetInt32()
                 : 0;
         }

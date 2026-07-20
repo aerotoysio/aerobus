@@ -66,7 +66,7 @@ namespace AeroBus.Core.Data
 
         public async Task<T?> GetByIdAsync<T>(string collection, Guid id, CancellationToken ct = default)
         {
-            var el = await _client.GetByFieldAsync(collection, "id", id.ToString(), ct);
+            var el = await _client.GetByFieldAsync(collection, Df.Id, id.ToString(), ct);
             return el is { } e ? e.Deserialize<T>(Json) : default;
         }
 
@@ -148,28 +148,28 @@ namespace AeroBus.Core.Data
             if (id == Guid.Empty)
             {
                 id = Guid.NewGuid();
-                node["id"] = id.ToString();
+                node[Df.Id] = id.ToString();
             }
 
             // Stamp audit fields where the document carries them: Updated on every
             // write; Created is preserved from the stored document when the caller
             // omits it (a full-document admin edit must not wipe the Created date).
-            var existing = await _client.GetByFieldAsync(collection, "id", id.ToString(), ct);
+            var existing = await _client.GetByFieldAsync(collection, Df.Id, id.ToString(), ct);
             var now = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
-            if (!node.TryGetPropertyValue("created", out var created) || created is null)
+            if (!node.TryGetPropertyValue(Df.Created, out var created) || created is null)
             {
                 string? preserved = null;
                 if (existing is { } prev &&
-                    prev.TryGetProperty("created", out var prevCreated) &&
+                    prev.TryGetProperty(Df.Created, out var prevCreated) &&
                     prevCreated.ValueKind == JsonValueKind.String)
                     preserved = prevCreated.GetString();
-                node["created"] = preserved ?? now;
+                node[Df.Created] = preserved ?? now;
             }
-            node["updated"] = now;
+            node[Df.Updated] = now;
 
             var json = node.ToJsonString();
             if (existing is not null)
-                await _client.ReplaceByFieldAsync(collection, "id", id.ToString(), json, ct);
+                await _client.ReplaceByFieldAsync(collection, Df.Id, id.ToString(), json, ct);
             else
                 await _client.InsertAsync(collection, json, ct);
 
@@ -177,7 +177,7 @@ namespace AeroBus.Core.Data
         }
 
         public Task<bool> DeleteAsync(string collection, Guid id, CancellationToken ct = default) =>
-            _client.DeleteByFieldAsync(collection, "id", id.ToString(), ct);
+            _client.DeleteByFieldAsync(collection, Df.Id, id.ToString(), ct);
 
         // ── SQL helpers ────────────────────────────────────────────────────────
 

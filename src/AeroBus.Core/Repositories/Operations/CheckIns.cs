@@ -25,15 +25,15 @@ namespace AeroBus.Core.Repositories.Operations
         protected override string Collection => DfCollections.Operations.CheckIns;
 
         public Task<IReadOnlyList<PassengerCheckIn>> GetByFlightAsync(Guid flightId, CancellationToken ct = default) =>
-            QueryAsync(Eq("flightId", flightId), ct: ct);
+            QueryAsync(Eq(Df.Field(nameof(PassengerCheckIn.FlightId)), flightId), ct: ct);
 
         public async Task<PassengerCheckIn?> GetByFlightAndPassengerAsync(Guid flightId, Guid passengerId, CancellationToken ct = default)
         {
-            var rows = await QueryAsync(new Dictionary<string, object?> { ["flightId"] = flightId, ["passengerId"] = passengerId }, ct: ct);
+            var rows = await QueryAsync(new Dictionary<string, object?> { [Df.Field(nameof(PassengerCheckIn.FlightId))] = flightId, [Df.Field(nameof(PassengerCheckIn.PassengerId))] = passengerId }, ct: ct);
             return rows.Count > 0 ? rows[0] : null;
         }
 
         public Task<IReadOnlyList<PassengerCheckIn>> GetByOrderAndFlightAsync(Guid orderId, Guid flightId, CancellationToken ct = default) =>
-            QueryAsync(new Dictionary<string, object?> { ["orderId"] = orderId, ["flightId"] = flightId }, ct: ct);
+            QueryAsync(new Dictionary<string, object?> { [Df.Field(nameof(PassengerCheckIn.OrderId))] = orderId, [Df.Field(nameof(PassengerCheckIn.FlightId))] = flightId }, ct: ct);
     }
 }
