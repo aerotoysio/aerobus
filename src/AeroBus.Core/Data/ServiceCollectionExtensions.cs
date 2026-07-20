@@ -39,6 +39,7 @@ namespace AeroBus.Core.Data
         public static IServiceCollection AddDocumentForge(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<DocumentForgeOptions>(configuration.GetSection(DocumentForgeOptions.SectionName));
+            services.Configure<TenancyOptions>(configuration.GetSection(TenancyOptions.SectionName));
 
             // Per-request tenant database routing.
             services.AddScoped<ITenantDatabase, TenantDatabase>();
