@@ -20,11 +20,19 @@ namespace AeroBus.Core.Repositories.Catalogue
         // GetById / GetByCompany / Save come from DocumentRepository<Airport>.
 
         public Task<IReadOnlyList<Airport>> ListByCompanyAsync(
-            Guid companyId, string? search, int pageNumber, int pageSize, CancellationToken ct = default) =>
-            // NOTE: free-text `search` is not yet applied (DocumentForge equality
-            // can't do LIKE); the relational path ignored it too. Revisit if the
-            // admin needs server-side airport search across the ~9k rows.
-            QueryAsync(Eq(Df.Field(nameof(Airport.CompanyId)), companyId), pageNumber, pageSize, ct);
+            Guid companyId, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
+        {
+            var where = $"{Df.Field(nameof(Airport.CompanyId))} = '{companyId}'";
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                // DF LIKE is case-insensitive; match code, name or city.
+                var q = Df.Contains(search);
+                where += $" AND ({Df.Field(nameof(Airport.Code))} LIKE '{q}'" +
+                         $" OR {Df.Field(nameof(Airport.Name))} LIKE '{q}'" +
+                         $" OR {Df.Field(nameof(Airport.City))} LIKE '{q}')";
+            }
+            return QueryWhereAsync(where, pageNumber, pageSize, ct);
+        }
 
         public Task<bool> DeleteAsync(Guid id, Guid concurrencyId, CancellationToken ct = default) =>
             base.DeleteAsync(id, ct);

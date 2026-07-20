@@ -33,5 +33,13 @@ namespace AeroBus.Core.Data
         /// <summary>Stored (camelCase) name of a model property: pass <c>nameof(Model.Property)</c>.</summary>
         public static string Field(string propertyName) =>
             JsonNamingPolicy.CamelCase.ConvertName(propertyName);
+
+        /// <summary>
+        /// Contains-style LIKE pattern for a user-supplied search term, with the
+        /// string literal escaped for interpolation into a DocumentForge WHERE
+        /// clause (DF's LIKE is case-insensitive; % = any, _ = one char).
+        /// </summary>
+        public static string Contains(string term) =>
+            "%" + term.Trim().Replace("'", "''") + "%";
     }
 }

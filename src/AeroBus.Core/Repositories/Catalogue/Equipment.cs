@@ -44,9 +44,17 @@ namespace AeroBus.Core.Repositories.Catalogue
             int pageSize,
             CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { [Df.Field(nameof(Model.Catalogue.Equipment.CompanyId))] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(Model.Catalogue.Equipment.Status))] = status;
-            return QueryAsync(f, pageNumber, pageSize, ct);
+            var where = $"{Df.Field(nameof(Model.Catalogue.Equipment.CompanyId))} = '{companyId}'";
+            if (!string.IsNullOrWhiteSpace(status))
+                where += $" AND {Df.Field(nameof(Model.Catalogue.Equipment.Status))} = '{status.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                // DF LIKE is case-insensitive; match type code or name.
+                var q = Df.Contains(search);
+                where += $" AND ({Df.Field(nameof(Model.Catalogue.Equipment.EquipmentCode))} LIKE '{q}'" +
+                         $" OR {Df.Field(nameof(Model.Catalogue.Equipment.Name))} LIKE '{q}')";
+            }
+            return QueryWhereAsync(where, pageNumber, pageSize, ct);
         }
 
         public Task<bool> DeleteAsync(
