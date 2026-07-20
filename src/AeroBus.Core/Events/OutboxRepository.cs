@@ -48,6 +48,14 @@ namespace AeroBus.Core.Events
     {
         private readonly IDocumentForgeClient _df = df;
 
+        // Stored (camelCase) field names, derived from the model so renames break the build.
+        private static readonly string FStatus = Df.Field(nameof(OutboxEvent.Status));
+        private static readonly string FSeq = Df.Field(nameof(OutboxEvent.Seq));
+        private static readonly string FType = Df.Field(nameof(OutboxEvent.Type));
+        private static readonly string FCompany = Df.Field(nameof(OutboxEvent.CompanyId));
+        private static readonly string FNextAttemptAt = Df.Field(nameof(OutboxEvent.NextAttemptAt));
+        private static readonly string FAttempts = Df.Field(nameof(OutboxEvent.Attempts));
+
         protected override string Collection => DfCollections.Events.Outbox;
 
         public Task<IReadOnlyList<OutboxEvent>> GetDispatchableAsync(DateTime nowUtc, int limit, CancellationToken ct = default)
@@ -55,27 +63,27 @@ namespace AeroBus.Core.Events
             var nowLit = Iso(nowUtc);
             // Pending (always due), OR Failed whose backoff has elapsed.
             var where =
-                $"(status = '{OutboxStatus.Pending}') OR " +
-                $"(status = '{OutboxStatus.Failed}' AND nextAttemptAt <= '{nowLit}') " +
-                "ORDER BY seq ASC";
+                $"({FStatus} = '{OutboxStatus.Pending}') OR " +
+                $"({FStatus} = '{OutboxStatus.Failed}' AND {FNextAttemptAt} <= '{nowLit}') " +
+                $"ORDER BY {FSeq} ASC";
             return QueryWhereAsync(where, size: limit, ct: ct);
         }
 
         public Task<IReadOnlyList<OutboxEvent>> ListForCompanyAsync(
             Guid companyId, string? type, string? status, long fromSeq, int limit, CancellationToken ct = default)
         {
-            var where = $"companyId = '{companyId}' AND seq > {fromSeq}";
+            var where = $"{FCompany} = '{companyId}' AND {FSeq} > {fromSeq}";
             if (!string.IsNullOrWhiteSpace(type))
-                where += $" AND type = '{Escape(type)}'";
+                where += $" AND {FType} = '{Escape(type)}'";
             if (!string.IsNullOrWhiteSpace(status))
-                where += $" AND status = '{Escape(status)}'";
-            where += " ORDER BY seq ASC";
+                where += $" AND {FStatus} = '{Escape(status)}'";
+            where += $" ORDER BY {FSeq} ASC";
             return QueryWhereAsync(where, size: limit, ct: ct);
         }
 
         public Task<IReadOnlyList<OutboxEvent>> TailForCompanyAsync(
             Guid companyId, long fromSeq, int limit, CancellationToken ct = default) =>
-            QueryWhereAsync($"companyId = '{companyId}' AND seq > {fromSeq} ORDER BY seq ASC", size: limit, ct: ct);
+            QueryWhereAsync($"{FCompany} = '{companyId}' AND {FSeq} > {fromSeq} ORDER BY {FSeq} ASC", size: limit, ct: ct);
 
         public async Task<bool> TryClaimAsync(OutboxEvent row, CancellationToken ct = default)
         {
@@ -85,11 +93,11 @@ namespace AeroBus.Core.Events
             var result = await _df.ConditionalUpdateAsync(
                 Collection,
                 docId,
-                conditions: new[] { new DocumentForgeCondition("status", "==", row.Status) },
+                conditions: new[] { new DocumentForgeCondition(FStatus, "==", row.Status) },
                 operations: new[]
                 {
-                    new DocumentForgeMutation("status", "set", OutboxStatus.Dispatching),
-                    new DocumentForgeMutation("attempts", "inc", 1),
+                    new DocumentForgeMutation(FStatus, "set", OutboxStatus.Dispatching),
+                    new DocumentForgeMutation(FAttempts, "inc", 1),
                 },
                 ct);
 
@@ -101,7 +109,7 @@ namespace AeroBus.Core.Events
         /// <summary>Resolve a business Id → DocumentForge internal _id (needed by the CAS claim).</summary>
         private async Task<string?> ResolveIdAsync(Guid id, CancellationToken ct)
         {
-            var rows = await _df.QueryAsync($"SELECT * FROM {Collection} WHERE id = '{id}'", ct);
+            var rows = await _df.QueryAsync($"SELECT * FROM {Collection} WHERE {Df.Id} = '{id}'", ct);
             if (rows.Count == 0) return null;
             return rows[0].TryGetProperty("_id", out var idEl) && idEl.ValueKind == JsonValueKind.String
                 ? idEl.GetString()

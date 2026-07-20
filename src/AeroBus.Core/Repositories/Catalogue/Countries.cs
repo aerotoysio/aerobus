@@ -20,15 +20,15 @@ namespace AeroBus.Core.Repositories.Catalogue
         protected override string Collection => DfCollections.Catalogue.Countries;
 
         public Task<IReadOnlyList<Country>> GetByContinentAsync(Guid continentId, CancellationToken ct = default) =>
-            QueryAsync(Eq("continentId", continentId), ct: ct);
+            QueryAsync(Eq(Df.Field(nameof(Country.ContinentId)), continentId), ct: ct);
 
         public Task<IReadOnlyList<Country>> ListByCompanyAsync(
             Guid companyId, Guid? continentId, string? status, string? search,
             int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { ["companyId"] = companyId };
-            if (continentId is { } cid) f["continentId"] = cid;
-            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
+            var f = new Dictionary<string, object?> { [Df.Field(nameof(Country.CompanyId))] = companyId };
+            if (continentId is { } cid) f[Df.Field(nameof(Country.ContinentId))] = cid;
+            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(Country.Status))] = status;
             return QueryAsync(f, pageNumber, pageSize, ct);
         }
 

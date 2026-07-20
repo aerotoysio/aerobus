@@ -25,10 +25,10 @@ namespace AeroBus.Core.Repositories.Catalogue
             Guid companyId, string? category, string? productType, string? status, string? search,
             int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { ["companyId"] = companyId };
-            if (!string.IsNullOrWhiteSpace(category)) f["category"] = category;
-            if (!string.IsNullOrWhiteSpace(productType)) f["productType"] = productType;
-            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
+            var f = new Dictionary<string, object?> { [Df.Field(nameof(Product.CompanyId))] = companyId };
+            if (!string.IsNullOrWhiteSpace(category)) f[Df.Field(nameof(Product.Category))] = category;
+            if (!string.IsNullOrWhiteSpace(productType)) f[Df.Field(nameof(Product.ProductType))] = productType;
+            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(Product.Status))] = status;
             return QueryAsync(f, pageNumber, pageSize, ct);
         }
 

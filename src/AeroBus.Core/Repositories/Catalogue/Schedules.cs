@@ -28,29 +28,29 @@ namespace AeroBus.Core.Repositories.Catalogue
             _store.GetByIdAsync<Schedule>(C, id, ct);
 
         public Task<IReadOnlyList<Schedule>> GetByGroupingIdAsync(Guid groupingId, CancellationToken ct = default) =>
-            _store.QueryAsync<Schedule>(C, new Dictionary<string, object?> { ["groupingId"] = groupingId }, ct: ct);
+            _store.QueryAsync<Schedule>(C, new Dictionary<string, object?> { [Df.Field(nameof(Schedule.GroupingId))] = groupingId }, ct: ct);
 
         public async Task<Schedule?> GetPreviousByGroupingIdAsync(Guid groupingId, Guid currentScheduleId, CancellationToken ct = default)
         {
-            var all = await _store.QueryAsync<Schedule>(C, new Dictionary<string, object?> { ["groupingId"] = groupingId }, ct: ct);
+            var all = await _store.QueryAsync<Schedule>(C, new Dictionary<string, object?> { [Df.Field(nameof(Schedule.GroupingId))] = groupingId }, ct: ct);
             return all.Where(s => s.Id != currentScheduleId).OrderByDescending(s => s.Created).FirstOrDefault();
         }
 
         public Task<IReadOnlyList<Schedule>> GetByCompanyAsync(Guid companyId, CancellationToken ct = default) =>
-            _store.QueryAsync<Schedule>(C, new Dictionary<string, object?> { ["companyId"] = companyId }, ct: ct);
+            _store.QueryAsync<Schedule>(C, new Dictionary<string, object?> { [Df.Field(nameof(Schedule.CompanyId))] = companyId }, ct: ct);
 
         public Task<IReadOnlyList<Schedule>> GetAllByCompanyAsync(Guid companyId, string status, CancellationToken ct = default) =>
-            _store.QueryAsync<Schedule>(C, new Dictionary<string, object?> { ["companyId"] = companyId, ["status"] = status }, ct: ct);
+            _store.QueryAsync<Schedule>(C, new Dictionary<string, object?> { [Df.Field(nameof(Schedule.CompanyId))] = companyId, [Df.Field(nameof(Schedule.Status))] = status }, ct: ct);
 
         public Task<IReadOnlyList<Schedule>> ListByCompanyAsync(
             Guid companyId, string? status, string? carrierCode, string? departureStation, string? arrivalStation,
             string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { ["companyId"] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
-            if (!string.IsNullOrWhiteSpace(carrierCode)) f["carrierCode"] = carrierCode;
-            if (!string.IsNullOrWhiteSpace(departureStation)) f["departureStation"] = departureStation;
-            if (!string.IsNullOrWhiteSpace(arrivalStation)) f["arrivalStation"] = arrivalStation;
+            var f = new Dictionary<string, object?> { [Df.Field(nameof(Schedule.CompanyId))] = companyId };
+            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(Schedule.Status))] = status;
+            if (!string.IsNullOrWhiteSpace(carrierCode)) f[Df.Field(nameof(Schedule.CarrierCode))] = carrierCode;
+            if (!string.IsNullOrWhiteSpace(departureStation)) f[Df.Field(nameof(Schedule.DepartureStation))] = departureStation;
+            if (!string.IsNullOrWhiteSpace(arrivalStation)) f[Df.Field(nameof(Schedule.ArrivalStation))] = arrivalStation;
             return _store.QueryAsync<Schedule>(C, f, pageNumber, pageSize, ct);
         }
 

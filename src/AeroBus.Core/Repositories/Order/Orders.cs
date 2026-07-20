@@ -24,7 +24,7 @@ namespace AeroBus.Core.Repositories.Order
         protected override string Collection => DfCollections.Order.Orders;
 
         public Task<Model.Order.Order?> GetByOrderIdAsync(string orderId, CancellationToken ct = default) =>
-            GetByFieldAsync("orderId", orderId, ct);
+            GetByFieldAsync(Df.Field(nameof(Model.Order.Order.OrderId)), orderId, ct);
 
         // events: order.created / order.changed via outbox in Phase 6
     }

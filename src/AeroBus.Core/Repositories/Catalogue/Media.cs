@@ -22,10 +22,10 @@ namespace AeroBus.Core.Repositories.Catalogue
             base.GetByIdAsync(id, ct);
 
         public Task<IReadOnlyList<Media>> GetByParentAsync(Guid parentId, Guid? companyId = null, CancellationToken ct = default) =>
-            QueryAsync(Eq("parentId", parentId), ct: ct);
+            QueryAsync(Eq(Df.Field(nameof(Model.Catalogue.Media.ParentId)), parentId), ct: ct);
 
         public Task<IReadOnlyList<Media>> SearchAsync(Guid companyId, string? search = null, CancellationToken ct = default) =>
-            QueryAsync(Eq("companyId", companyId), ct: ct);
+            QueryAsync(Eq(Df.Field(nameof(Model.Catalogue.Media.CompanyId)), companyId), ct: ct);
 
         public Task<bool> DeleteAsync(Guid id, Guid? companyId = null, Guid? concurrencyId = null, CancellationToken ct = default) =>
             base.DeleteAsync(id, ct);

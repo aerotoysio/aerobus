@@ -27,7 +27,7 @@ namespace AeroBus.Core.Repositories.Admin
         protected override string Collection => DfCollections.Admin.Organisations;
 
         public Task<Organisation?> GetByShortNameAsync(string shortName, CancellationToken ct = default) =>
-            GetByFieldAsync("shortName", shortName, ct);
+            GetByFieldAsync(Df.Field(nameof(Organisation.ShortName)), shortName, ct);
 
         public Task<IReadOnlyList<Organisation>> GetAllAsync(CancellationToken ct = default) =>
             ListAsync(ct: ct);

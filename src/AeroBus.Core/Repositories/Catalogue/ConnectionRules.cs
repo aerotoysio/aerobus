@@ -41,7 +41,7 @@ namespace AeroBus.Core.Repositories.Catalogue
             int pageNumber,
             int pageSize,
             CancellationToken ct = default) =>
-            QueryAsync(Eq("companyId", companyId), pageNumber, pageSize, ct);
+            QueryAsync(Eq(Df.Field(nameof(ConnectionRule.CompanyId)), companyId), pageNumber, pageSize, ct);
 
         public Task<bool> DeleteAsync(
             Guid id,

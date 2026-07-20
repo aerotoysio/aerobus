@@ -44,7 +44,7 @@ namespace AeroBus.Core.Repositories.Admin
         protected override string Collection => DfCollections.Admin.ApiTokens;
 
         public Task<IReadOnlyList<ApiToken>> GetByPrefixAsync(string prefix, CancellationToken ct = default) =>
-            QueryAsync(Eq("prefix", prefix), ct: ct);
+            QueryAsync(Eq(Df.Field(nameof(ApiToken.Prefix)), prefix), ct: ct);
 
         // No partial-update primitive on IDocumentStore: read-modify-write the
         // whole document.
