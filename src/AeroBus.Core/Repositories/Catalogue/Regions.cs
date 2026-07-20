@@ -26,10 +26,14 @@ namespace AeroBus.Core.Repositories.Catalogue
             Guid companyId, Guid? countryId, string? status, string? search,
             int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { [Df.Field(nameof(Region.CompanyId))] = companyId };
-            if (countryId is { } cid) f[Df.Field(nameof(Region.CountryId))] = cid;
-            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(Region.Status))] = status;
-            return QueryAsync(f, pageNumber, pageSize, ct);
+            var where = $"{Df.Field(nameof(Region.CompanyId))} = '{companyId}'";
+            if (countryId is { } cid)
+                where += $" AND {Df.Field(nameof(Region.CountryId))} = '{cid}'";
+            if (!string.IsNullOrWhiteSpace(status))
+                where += $" AND {Df.Field(nameof(Region.Status))} = '{status.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(search))
+                where += " AND " + Df.Match(search, Df.Field(nameof(Region.Code)), Df.Field(nameof(Region.Name)));
+            return QueryWhereAsync(where, pageNumber, pageSize, ct);
         }
 
         public Task<bool> DeleteAsync(Guid id, Guid concurrencyId, CancellationToken ct = default) =>
