@@ -85,19 +85,45 @@ namespace AeroBus.Core.Events
         }
 
         /// <summary>
-        /// One dispatch cycle: pull the dispatchable batch, then claim + deliver each
-        /// row. Public so a test can drive a single deterministic cycle without the
-        /// timer. Uses a fresh DI scope per cycle (the repos are scoped).
+        /// One dispatch cycle. Events are airline-specific, so the pump fans out
+        /// per database: the control outbox first (platform events), then every
+        /// Active org's own database from the registry. One org's failure is
+        /// logged and skipped — it must never starve the others. Public so a test
+        /// can drive a single deterministic cycle without the timer; uses a fresh
+        /// DI scope per cycle (the repos are scoped).
         /// </summary>
         public async Task PumpOnceAsync(CancellationToken ct = default)
         {
             using var scope = _scopes.CreateScope();
-            var outbox = scope.ServiceProvider.GetRequiredService<IOutbox>();
-            var subs = scope.ServiceProvider.GetRequiredService<IWebhookSubscriptions>();
-            var delivery = scope.ServiceProvider.GetRequiredService<IWebhookDelivery>();
+            var sp = scope.ServiceProvider;
+            var delivery = sp.GetRequiredService<IWebhookDelivery>();
 
-            var now = DateTime.UtcNow;
-            var batch = await outbox.GetDispatchableAsync(now, _opts.BatchSize, ct);
+            // A failure listing the targets (the registry read) propagates to the
+            // outer backoff — it means the store itself is unreachable.
+            var targets = await sp.GetRequiredService<IEventPumpTargets>().GetAsync(ct);
+            foreach (var target in targets)
+            {
+                if (ct.IsCancellationRequested) break;
+                try
+                {
+                    await PumpDatabaseAsync(target.Outbox, target.Subscriptions, delivery, ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    // One database's trouble must never starve the others.
+                    _log.LogWarning(ex, "Outbox pump for '{Database}' failed this cycle; continuing with the rest.", target.Database);
+                }
+            }
+        }
+
+        private async Task PumpDatabaseAsync(
+            IOutbox outbox, IWebhookSubscriptions subs, IWebhookDelivery delivery, CancellationToken ct)
+        {
+            var batch = await outbox.GetDispatchableAsync(DateTime.UtcNow, _opts.BatchSize, ct);
             if (batch.Count == 0) return;
 
             foreach (var row in batch)

@@ -18,11 +18,25 @@ namespace AeroBus.Core.Events
         {
             services.Configure<EventsOptions>(config.GetSection("Events"));
 
-            // Publisher + repos are scoped like the other domain services; their
-            // internal cursor-id cache is process-wide (static), so scope is fine.
-            services.AddScoped<IEventPublisher, EventPublisher>();
-            services.AddScoped<IOutbox, Outbox>();
-            services.AddScoped<IWebhookSubscriptions, WebhookSubscriptions>();
+            // Events are airline-specific: EventStores picks the request's event
+            // database (the org's own db when the tenant middleware resolved one,
+            // control for platform paths), and publisher + repos are built over
+            // that pick. Scoped like the other domain services; the publisher's
+            // cursor-id cache is process-wide (static, partitioned per database).
+            services.AddScoped<IEventStores, EventStores>();
+            services.AddScoped<IEventPublisher>(sp => new EventPublisher(
+                sp.GetRequiredService<IEventStores>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<EventPublisher>>()));
+            services.AddScoped<IOutbox>(sp =>
+            {
+                var stores = sp.GetRequiredService<IEventStores>();
+                return new Outbox(stores.Store, stores.Client);
+            });
+            services.AddScoped<IWebhookSubscriptions>(sp =>
+                new WebhookSubscriptions(sp.GetRequiredService<IEventStores>().Store));
+
+            // What the dispatcher pumps: control + every Active registered org.
+            services.AddScoped<IEventPumpTargets, RegistryEventPumpTargets>();
 
             // Typed HttpClient for webhook delivery, with the configured timeout.
             services.AddHttpClient<IWebhookDelivery, WebhookDelivery>((sp, http) =>

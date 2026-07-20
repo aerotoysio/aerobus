@@ -1,5 +1,4 @@
 using AeroBus.Core.Data;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace AeroBus.Core.Events
 {
@@ -18,8 +17,10 @@ namespace AeroBus.Core.Events
     /// every matching URL; the <c>/events/subscriptions</c> endpoints manage them
     /// per company.
     /// </summary>
-    public sealed class WebhookSubscriptions(
-        [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store)
+    // Subscriptions are airline-owned: they live in the org's own database next
+    // to its outbox (EventStores picks the database per request; the dispatcher
+    // constructs one per database it pumps).
+    public sealed class WebhookSubscriptions(IDocumentStore store)
         : DocumentRepository<WebhookSubscription>(store), IWebhookSubscriptions
     {
         protected override string Collection => DfCollections.Events.WebhookSubscriptions;

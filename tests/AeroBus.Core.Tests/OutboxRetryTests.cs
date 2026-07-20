@@ -27,6 +27,10 @@ public class OutboxRetryTests(DocumentForgeFixture fx)
         services.AddSingleton<IOptions<EventsOptions>>(new OptionsWrapper<EventsOptions>(opts));
         services.AddScoped<IOutbox>(_ => new Outbox(fx.Store, fx.Client));
         services.AddScoped<IWebhookSubscriptions>(_ => new WebhookSubscriptions(fx.Store));
+        // The dispatcher pumps whatever databases the target source lists; here,
+        // just the fixture's single database.
+        services.AddScoped<IEventPumpTargets>(_ => new StaticEventPumpTargets(
+            new EventPumpTarget("test", new Outbox(fx.Store, fx.Client), new WebhookSubscriptions(fx.Store))));
         // Delivery over a short-timeout HttpClient; the target URL is unroutable so
         // every POST fails fast.
         services.AddScoped<IWebhookDelivery>(_ =>

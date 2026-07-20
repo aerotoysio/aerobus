@@ -17,6 +17,14 @@ namespace AeroBus.Core.Data
     public interface ITenantDatabase
     {
         string? CurrentDatabase { get; set; }
+
+        /// <summary>
+        /// True only when the tenant middleware resolved an authenticated org and
+        /// stamped its database — i.e. <see cref="CurrentDatabase"/> is a tenant's
+        /// own database rather than the static fallback. Lets services that split
+        /// tenant vs platform data (the event backbone) pick the right home.
+        /// </summary>
+        bool IsTenantResolved { get; }
     }
 
     public sealed class TenantDatabase : ITenantDatabase
@@ -32,5 +40,7 @@ namespace AeroBus.Core.Data
             get => _current ?? _default;
             set => _current = string.IsNullOrWhiteSpace(value) ? null : value;
         }
+
+        public bool IsTenantResolved => _current is not null;
     }
 }
