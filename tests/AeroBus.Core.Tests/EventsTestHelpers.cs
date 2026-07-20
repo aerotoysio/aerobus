@@ -12,7 +12,7 @@ namespace AeroBus.Core.Tests;
 internal static class EventsTestHelpers
 {
     public static EventPublisher Publisher(DocumentForgeFixture fx) =>
-        new(fx.Client, fx.Store, NullLogger<EventPublisher>.Instance);
+        new(fx.Client, fx.Store, "test", NullLogger<EventPublisher>.Instance);
 
     public static Outbox Outbox(DocumentForgeFixture fx) =>
         new(fx.Store, fx.Client);

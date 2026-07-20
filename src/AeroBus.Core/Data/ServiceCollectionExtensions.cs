@@ -20,10 +20,11 @@ namespace AeroBus.Core.Data
         /// Keyed-service key for the SHARED control-plane client + store: a fixed
         /// NAMED database (<see cref="DocumentForgeOptions.ControlDatabase"/>,
         /// default <c>control</c>, ensured at startup). Home of the tenant registry
-        /// (admin.organisations) and everything read at auth-time or by background
-        /// services — identity/RBAC, API tokens and the events outbox — which
-        /// therefore can't live in a per-tenant database. A named database also
-        /// keeps every control-plane call on DocumentForge's scoped
+        /// (admin.organisations) and what's read at auth-time — identity/RBAC and
+        /// API tokens — which therefore can't live in a per-tenant database, plus
+        /// PLATFORM-level events (org.created and friends). Airline domain events
+        /// live in each org's own database (see EventStores). A named database
+        /// also keeps every control-plane call on DocumentForge's scoped
         /// <c>db/{name}</c> surface (namespaced collection names are fully
         /// supported there on all deployed server versions). Injected via
         /// <c>[FromKeyedServices(ControlClientKey)]</c>.

@@ -61,28 +61,34 @@ namespace AeroBus.Core.Events
 
         // CompanyId (Guid.Empty == global) → cursor doc's DocumentForge _id. Static
         // so the cache is useful across scoped requests, like InventoryService.
-        private static readonly ConcurrentDictionary<Guid, (string Id, DateTime ExpiresUtc)> CursorIdCache = new();
+        private static readonly ConcurrentDictionary<(string Db, Guid Company), (string Id, DateTime ExpiresUtc)> CursorIdCache = new();
 
         // Per-company seeding gate: collapses the N concurrent first-publishers within
         // THIS process to a single seed insert, so a fresh company yields exactly one
         // cursor row (DocumentForge does not enforce Id uniqueness on insert, so
         // unguarded concurrent seeds would each create a duplicate row). Across
         // processes, DedupeCursorsAsync converges any residual duplicates.
-        private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> SeedGates = new();
+        private static readonly ConcurrentDictionary<(string Db, Guid Company), SemaphoreSlim> SeedGates = new();
 
         private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
 
         private readonly IDocumentForgeClient _df;
         private readonly IDocumentStore _store;
+        private readonly string _dbKey;
         private readonly ILogger<EventPublisher> _log;
 
+        // Publishes into the CALLER'S event database (the org's own db for tenant
+        // requests, control for platform paths); dbKey partitions the process-wide
+        // cursor cache so cached _ids never leak across databases.
+        public EventPublisher(IEventStores stores, ILogger<EventPublisher> log)
+            : this(stores.Client, stores.Store, stores.DatabaseKey, log) { }
+
         public EventPublisher(
-            [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentForgeClient df,
-            [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store,
-            ILogger<EventPublisher> log)
+            IDocumentForgeClient df, IDocumentStore store, string dbKey, ILogger<EventPublisher> log)
         {
             _df = df;
             _store = store;
+            _dbKey = dbKey;
             _log = log;
         }
 
@@ -186,7 +192,7 @@ namespace AeroBus.Core.Events
         /// </summary>
         private async Task<string> EnsureCursorAsync(Guid companyId, CancellationToken ct)
         {
-            var gate = SeedGates.GetOrAdd(companyId, _ => new SemaphoreSlim(1, 1));
+            var gate = SeedGates.GetOrAdd((_dbKey, companyId), _ => new SemaphoreSlim(1, 1));
             await gate.WaitAsync(ct);
             try
             {
@@ -267,7 +273,7 @@ namespace AeroBus.Core.Events
         private async Task<string?> ResolveCursorIdAsync(Guid companyId, bool forceRefresh, CancellationToken ct)
         {
             if (!forceRefresh &&
-                CursorIdCache.TryGetValue(companyId, out var cached) &&
+                CursorIdCache.TryGetValue((_dbKey, companyId), out var cached) &&
                 cached.ExpiresUtc > DateTime.UtcNow)
                 return cached.Id;
 
@@ -299,11 +305,11 @@ namespace AeroBus.Core.Events
             throw new InvalidOperationException("Event cursor inc succeeded but the returned document had no numeric Seq.");
         }
 
-        private static void CacheId(Guid companyId, string id) =>
-            CursorIdCache[companyId] = (id, DateTime.UtcNow.Add(IdCacheTtl));
+        private void CacheId(Guid companyId, string id) =>
+            CursorIdCache[(_dbKey, companyId)] = (id, DateTime.UtcNow.Add(IdCacheTtl));
 
-        private static void Invalidate(Guid companyId) =>
-            CursorIdCache.TryRemove(companyId, out _);
+        private void Invalidate(Guid companyId) =>
+            CursorIdCache.TryRemove((_dbKey, companyId), out _);
 
         private static JsonNode? ToNode(object data)
         {

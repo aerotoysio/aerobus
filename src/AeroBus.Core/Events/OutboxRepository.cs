@@ -41,9 +41,10 @@ namespace AeroBus.Core.Events
         Task<bool> TryClaimAsync(OutboxEvent row, CancellationToken ct = default);
     }
 
-    public sealed class Outbox(
-        [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentStore store,
-        [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentForgeClient df)
+    // Constructed against the CALLER'S event database (the org's own db for
+    // tenant requests, control for platform paths) — see EventStores for the
+    // request-scoped pick; the dispatcher builds one per database it pumps.
+    public sealed class Outbox(IDocumentStore store, IDocumentForgeClient df)
         : DocumentRepository<OutboxEvent>(store), IOutbox
     {
         private readonly IDocumentForgeClient _df = df;
