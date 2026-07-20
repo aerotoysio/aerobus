@@ -1,7 +1,6 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Options;
 
 namespace AeroBus.Core.Rules
 {
@@ -22,32 +21,54 @@ namespace AeroBus.Core.Rules
         };
 
         private readonly HttpClient _http;
+        private readonly IRuleForgeSettingsProvider _settings;
 
-        public RuleForgeClient(HttpClient http, IOptions<RuleForgeOptions> options)
+        // Settings (base URL / key / timeout) resolve per CALL from platform
+        // config (database-held, admin-editable at runtime) with the appsettings
+        // bootstrap as fallback — so a settings change applies without a restart.
+        public RuleForgeClient(HttpClient http, IRuleForgeSettingsProvider settings)
         {
             _http = http;
-            var opts = options.Value;
+            _settings = settings;
+            // The outer HttpClient timeout stays generous; the effective per-call
+            // timeout is enforced via a linked token from the resolved settings.
+            _http.Timeout = TimeSpan.FromSeconds(30);
+        }
 
-            if (string.IsNullOrWhiteSpace(opts.BaseUrl))
-                throw new InvalidOperationException("RuleForge:BaseUrl is not configured.");
+        private async Task<(RuleForgeSettings Settings, Uri Uri)> ResolveAsync(string endpoint, CancellationToken ct)
+        {
+            var s = await _settings.GetAsync(ct);
+            if (string.IsNullOrWhiteSpace(s.BaseUrl))
+                throw new InvalidOperationException(
+                    "RuleForge base URL is not configured (platform config 'ruleforge.baseUrl' or the RuleForge:BaseUrl bootstrap).");
+            return (s, new Uri(s.BaseUrl.TrimEnd('/') + "/" + endpoint.TrimStart('/')));
+        }
 
-            _http.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
-            _http.Timeout = TimeSpan.FromMilliseconds(opts.TimeoutMs <= 0 ? 2000 : opts.TimeoutMs);
-            if (!string.IsNullOrWhiteSpace(opts.ApiKey))
-                _http.DefaultRequestHeaders.TryAddWithoutValidation(ApiKeyHeader, opts.ApiKey);
+        private static HttpRequestMessage Request(HttpMethod method, Uri uri, RuleForgeSettings s, HttpContent? content = null)
+        {
+            var req = new HttpRequestMessage(method, uri) { Content = content };
+            if (!string.IsNullOrWhiteSpace(s.ApiKey))
+                req.Headers.TryAddWithoutValidation(ApiKeyHeader, s.ApiKey);
+            return req;
+        }
+
+        private static CancellationTokenSource TimeoutScope(RuleForgeSettings s, CancellationToken ct)
+        {
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromMilliseconds(s.TimeoutMs));
+            return cts;
         }
 
         public async Task<RuleForgeEnvelope> EvaluateAsync(string endpoint, object payload, bool debug = false, CancellationToken ct = default)
         {
-            // Endpoint is a bound rule route like "/v1/offer/shop-bundles" — join
-            // it onto the base address, trimming the leading slash so the base
-            // path isn't discarded.
-            var relative = endpoint.TrimStart('/');
-            if (debug) relative += (relative.Contains('?') ? "&" : "?") + "debug=true";
+            if (debug) endpoint += (endpoint.Contains('?') ? "&" : "?") + "debug=true";
+            var (settings, uri) = await ResolveAsync(endpoint, ct);
 
             var json = JsonSerializer.Serialize(payload, JsonOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var resp = await _http.PostAsync(relative, content, ct);
+            using var timeout = TimeoutScope(settings, ct);
+            using var request = Request(HttpMethod.Post, uri, settings, content);
+            using var resp = await _http.SendAsync(request, timeout.Token);
             var body = await resp.Content.ReadAsStringAsync(ct);
             if (!resp.IsSuccessStatusCode)
                 throw new HttpRequestException(
@@ -64,7 +85,10 @@ namespace AeroBus.Core.Rules
         {
             try
             {
-                using var resp = await _http.GetAsync("health", ct);
+                var (settings, uri) = await ResolveAsync("health", ct);
+                using var timeout = TimeoutScope(settings, ct);
+                using var request = Request(HttpMethod.Get, uri, settings);
+                using var resp = await _http.SendAsync(request, timeout.Token);
                 return resp.IsSuccessStatusCode;
             }
             catch
@@ -81,7 +105,10 @@ namespace AeroBus.Core.Rules
             // up the new version. Return false so the caller can surface "not refreshed".
             try
             {
-                using var resp = await _http.PostAsync("admin/refresh", content: null, ct);
+                var (settings, uri) = await ResolveAsync("admin/refresh", ct);
+                using var timeout = TimeoutScope(settings, ct);
+                using var request = Request(HttpMethod.Post, uri, settings);
+                using var resp = await _http.SendAsync(request, timeout.Token);
                 return resp.IsSuccessStatusCode;
             }
             catch (Exception) when (!ct.IsCancellationRequested)

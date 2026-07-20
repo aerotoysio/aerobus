@@ -15,7 +15,25 @@ dev files carry clearly-labelled dev-only values, production takes secrets from 
 | **aerostudio** (admin web UI) | [aerostudio](https://github.com/aerotoysio/aerostudio) | `.env.local` (from `.env.example`) | Auth.js reads `AUTH_KEYCLOAK_*` by convention |
 | **aerodesk** (agent desktop) | [aerodesk](https://github.com/aerotoysio/aerodesk) | per-user `%AppData%\AeroDesk` (`settings.json`, `connections.json`, DPAPI `secrets.json`) | Everything is per-connection, entered in the Connect dialog |
 
-## aerobus settings (`appsettings.json` sections)
+## aerobus settings — the split
+
+**Settings live in the database; appsettings holds only the bootstrap** — how to
+reach Keycloak and DocumentForge (you cannot read settings out of a database you
+can't reach). Everything else is database-held and admin-editable at runtime:
+
+- **Platform settings** → `admin.platformconfig` in the **control** database, managed via
+  `GET/PUT/DELETE /admin/platform-config[/{key}]` (platform staff / `admin.all`). Secrets
+  (`isSecret: true`) are **encrypted at rest** (Data Protection) and **write-only** — the
+  list shows a mask, plaintext never leaves the server. Every change emits a
+  `platform.config-changed` event (free audit trail). Current keys: `ruleforge.baseUrl`,
+  `ruleforge.apiKey` (secret), `ruleforge.timeoutMs` — resolved per call, so changes apply
+  **without a restart**. On first start the seeder migrates any appsettings `RuleForge`
+  values into the database (never overwriting existing rows).
+- **Org settings** → the org's own database: the `admin.companies` settings document
+  (designator, currency, load factor…) + `admin.companyconfigs` key/values (timezone etc.),
+  seeded at onboarding and managed via `/admin/companies/config`.
+
+### `appsettings.json` bootstrap sections
 
 Override any key with an environment variable using `Section__Key` (double underscore).
 
@@ -23,7 +41,7 @@ Override any key with an environment variable using `Section__Key` (double under
 | --- | --- | --- |
 | `DocumentForge` | `BaseUrl`, `ApiKey`, `Database`, `ControlDatabase` | The datastore. `Database` is the **static fallback** DB; authenticated org requests are routed to the org's own `db/{shortName}` by the tenancy middleware (see README "Multi-tenancy") |
 | `Keycloak` | `BaseUrl`, `Realm`, `ClientId` (=`aerobus`), `ClientSecret`, `Audience` (=`aerobus`) | JWT validation (`{BaseUrl}/realms/{Realm}` issuer, `aud=aerobus`) **and** the admin service account used to create orgs/users. Leaving `BaseUrl`/`Realm` empty disables the Keycloak scheme (dev API-key-only mode) |
-| `RuleForge` | `BaseUrl`, `ApiKey`, `TimeoutMs`, `Endpoints:*` | Decision points; degrade to Allow when the engine is down |
+| `RuleForge` | `BaseUrl`, `ApiKey`, `TimeoutMs`, `Endpoints:*` | **Bootstrap fallback only** — the runtime values live in platform config (above); this section covers dev/tests and first-start seeding |
 | `Events` | *(optional)* `PollSeconds`, `MaxAttempts`, `BackoffBaseSeconds`, `BackoffCapSeconds`, `BatchSize`, `WebhookTimeoutSeconds`, `RetentionDays` | Outbox dispatcher; all defaulted, runs unconfigured |
 
 Docker Compose (`docker-compose.yml` + `.env` from `.env.example`) wires `DFDB_API_KEY` and

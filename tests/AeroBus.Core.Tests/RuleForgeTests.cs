@@ -34,8 +34,12 @@ public class RuleForgeTests
     private static HttpResponseMessage Json(HttpStatusCode code, string body) =>
         new(code) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
-    private static RuleForgeClient ClientFor(StubHandler handler, RuleForgeOptions? options = null) =>
-        new(new HttpClient(handler), new Opt<RuleForgeOptions>(options ?? new RuleForgeOptions { BaseUrl = "http://localhost:5050" }));
+    private static RuleForgeClient ClientFor(StubHandler handler, RuleForgeOptions? options = null)
+    {
+        var o = options ?? new RuleForgeOptions { BaseUrl = "http://localhost:5050" };
+        return new(new HttpClient(handler),
+            new StaticRuleForgeSettingsProvider(new RuleForgeSettings(o.BaseUrl, o.ApiKey, o.TimeoutMs)));
+    }
 
     private static DecisionRunner RunnerFor(IRuleForgeClient client, RuleForgeOptions? options = null, DecisionRunnerOptions? runnerOptions = null) =>
         new(client,
