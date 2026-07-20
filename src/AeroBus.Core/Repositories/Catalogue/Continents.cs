@@ -19,7 +19,7 @@ namespace AeroBus.Core.Repositories.Catalogue
 
         public Task<IReadOnlyList<Continent>> ListByCompanyAsync(
             Guid companyId, string? search, int pageNumber, int pageSize, CancellationToken ct = default) =>
-            QueryAsync(Eq("CompanyId", companyId), pageNumber, pageSize, ct);
+            QueryAsync(Eq("companyId", companyId), pageNumber, pageSize, ct);
 
         public Task<bool> DeleteAsync(Guid id, Guid concurrencyId, CancellationToken ct = default) =>
             base.DeleteAsync(id, ct);

@@ -24,16 +24,16 @@ namespace AeroBus.Core.Repositories.Catalogue
             _store.GetByIdAsync<Layout>(C, id, ct);
 
         public Task<IReadOnlyList<Layout>> GetByEquipmentAsync(Guid equipmentId, CancellationToken ct = default) =>
-            _store.QueryAsync<Layout>(C, new Dictionary<string, object?> { ["EquipmentId"] = equipmentId }, ct: ct);
+            _store.QueryAsync<Layout>(C, new Dictionary<string, object?> { ["equipmentId"] = equipmentId }, ct: ct);
 
         public Task<IReadOnlyList<Layout>> GetByCompanyAsync(Guid companyId, CancellationToken ct = default) =>
-            _store.QueryAsync<Layout>(C, new Dictionary<string, object?> { ["CompanyId"] = companyId }, ct: ct);
+            _store.QueryAsync<Layout>(C, new Dictionary<string, object?> { ["companyId"] = companyId }, ct: ct);
 
         public Task<IReadOnlyList<Layout>> ListByCompanyAsync(
             Guid companyId, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { ["CompanyId"] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f["Status"] = status;
+            var f = new Dictionary<string, object?> { ["companyId"] = companyId };
+            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
             return _store.QueryAsync<Layout>(C, f, pageNumber, pageSize, ct);
         }
 

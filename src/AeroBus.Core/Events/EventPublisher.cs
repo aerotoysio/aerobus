@@ -151,8 +151,8 @@ namespace AeroBus.Core.Events
                 var result = await _df.ConditionalUpdateAsync(
                     CursorCollection,
                     cursorId,
-                    conditions: new[] { new DocumentForgeCondition("Seq", "exists") },
-                    operations: new[] { new DocumentForgeMutation("Seq", "inc", 1) },
+                    conditions: new[] { new DocumentForgeCondition("seq", "exists") },
+                    operations: new[] { new DocumentForgeMutation("seq", "inc", 1) },
                     ct);
 
                 if (result.Success)
@@ -225,7 +225,7 @@ namespace AeroBus.Core.Events
         private async Task<string?> DedupeCursorsAsync(Guid companyId, CancellationToken ct)
         {
             var rows = await _df.QueryAsync(
-                $"SELECT * FROM {CursorCollection} WHERE CompanyId = '{companyId}'", ct);
+                $"SELECT * FROM {CursorCollection} WHERE companyId = '{companyId}'", ct);
             if (rows.Count == 0) return null;
 
             var ids = rows
@@ -243,7 +243,7 @@ namespace AeroBus.Core.Events
                 // only runs on the rare cross-process seed race.
                 var loserBusinessId = BusinessId(rows, ids[i]);
                 if (loserBusinessId is not null)
-                    try { await _df.DeleteByFieldAsync(CursorCollection, "Id", loserBusinessId, ct); }
+                    try { await _df.DeleteByFieldAsync(CursorCollection, "id", loserBusinessId, ct); }
                     catch { /* inert duplicate; ignore */ }
             }
             return survivor;
@@ -253,7 +253,7 @@ namespace AeroBus.Core.Events
         {
             foreach (var r in rows)
                 if (ExtractId(r) == internalId &&
-                    r.TryGetProperty("Id", out var idEl) && idEl.ValueKind == JsonValueKind.String)
+                    r.TryGetProperty("id", out var idEl) && idEl.ValueKind == JsonValueKind.String)
                     return idEl.GetString();
             return null;
         }
@@ -276,7 +276,7 @@ namespace AeroBus.Core.Events
         private async Task<string?> QueryCursorIdAsync(Guid companyId, CancellationToken ct)
         {
             var rows = await _df.QueryAsync(
-                $"SELECT * FROM {CursorCollection} WHERE CompanyId = '{companyId}'", ct);
+                $"SELECT * FROM {CursorCollection} WHERE companyId = '{companyId}'", ct);
             return rows.Count == 0 ? null : ExtractId(rows[0]);
         }
 
@@ -290,7 +290,7 @@ namespace AeroBus.Core.Events
 
         private static long ReadSeq(JsonElement? doc)
         {
-            if (doc is { } d && d.TryGetProperty("Seq", out var seqEl) && seqEl.ValueKind == JsonValueKind.Number)
+            if (doc is { } d && d.TryGetProperty("seq", out var seqEl) && seqEl.ValueKind == JsonValueKind.Number)
                 return seqEl.GetInt64();
             throw new InvalidOperationException("Event cursor inc succeeded but the returned document had no numeric Seq.");
         }

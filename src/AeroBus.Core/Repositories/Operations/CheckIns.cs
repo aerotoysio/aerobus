@@ -25,15 +25,15 @@ namespace AeroBus.Core.Repositories.Operations
         protected override string Collection => DfCollections.Operations.CheckIns;
 
         public Task<IReadOnlyList<PassengerCheckIn>> GetByFlightAsync(Guid flightId, CancellationToken ct = default) =>
-            QueryAsync(Eq("FlightId", flightId), ct: ct);
+            QueryAsync(Eq("flightId", flightId), ct: ct);
 
         public async Task<PassengerCheckIn?> GetByFlightAndPassengerAsync(Guid flightId, Guid passengerId, CancellationToken ct = default)
         {
-            var rows = await QueryAsync(new Dictionary<string, object?> { ["FlightId"] = flightId, ["PassengerId"] = passengerId }, ct: ct);
+            var rows = await QueryAsync(new Dictionary<string, object?> { ["flightId"] = flightId, ["passengerId"] = passengerId }, ct: ct);
             return rows.Count > 0 ? rows[0] : null;
         }
 
         public Task<IReadOnlyList<PassengerCheckIn>> GetByOrderAndFlightAsync(Guid orderId, Guid flightId, CancellationToken ct = default) =>
-            QueryAsync(new Dictionary<string, object?> { ["OrderId"] = orderId, ["FlightId"] = flightId }, ct: ct);
+            QueryAsync(new Dictionary<string, object?> { ["orderId"] = orderId, ["flightId"] = flightId }, ct: ct);
     }
 }

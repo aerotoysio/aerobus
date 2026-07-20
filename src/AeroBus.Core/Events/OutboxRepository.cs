@@ -19,7 +19,7 @@ namespace AeroBus.Core.Events
 
         /// <summary>
         /// Rows the dispatcher may work now: Status=Pending, or Status=Failed with
-        /// NextAttemptAt due. Ordered by Seq, capped at <paramref name="limit"/>.
+        /// nextAttemptAt due. Ordered by Seq, capped at <paramref name="limit"/>.
         /// </summary>
         Task<IReadOnlyList<OutboxEvent>> GetDispatchableAsync(DateTime nowUtc, int limit, CancellationToken ct = default);
 
@@ -55,27 +55,27 @@ namespace AeroBus.Core.Events
             var nowLit = Iso(nowUtc);
             // Pending (always due), OR Failed whose backoff has elapsed.
             var where =
-                $"(Status = '{OutboxStatus.Pending}') OR " +
-                $"(Status = '{OutboxStatus.Failed}' AND NextAttemptAt <= '{nowLit}') " +
-                "ORDER BY Seq ASC";
+                $"(status = '{OutboxStatus.Pending}') OR " +
+                $"(status = '{OutboxStatus.Failed}' AND nextAttemptAt <= '{nowLit}') " +
+                "ORDER BY seq ASC";
             return QueryWhereAsync(where, size: limit, ct: ct);
         }
 
         public Task<IReadOnlyList<OutboxEvent>> ListForCompanyAsync(
             Guid companyId, string? type, string? status, long fromSeq, int limit, CancellationToken ct = default)
         {
-            var where = $"CompanyId = '{companyId}' AND Seq > {fromSeq}";
+            var where = $"companyId = '{companyId}' AND seq > {fromSeq}";
             if (!string.IsNullOrWhiteSpace(type))
-                where += $" AND Type = '{Escape(type)}'";
+                where += $" AND type = '{Escape(type)}'";
             if (!string.IsNullOrWhiteSpace(status))
-                where += $" AND Status = '{Escape(status)}'";
-            where += " ORDER BY Seq ASC";
+                where += $" AND status = '{Escape(status)}'";
+            where += " ORDER BY seq ASC";
             return QueryWhereAsync(where, size: limit, ct: ct);
         }
 
         public Task<IReadOnlyList<OutboxEvent>> TailForCompanyAsync(
             Guid companyId, long fromSeq, int limit, CancellationToken ct = default) =>
-            QueryWhereAsync($"CompanyId = '{companyId}' AND Seq > {fromSeq} ORDER BY Seq ASC", size: limit, ct: ct);
+            QueryWhereAsync($"companyId = '{companyId}' AND seq > {fromSeq} ORDER BY seq ASC", size: limit, ct: ct);
 
         public async Task<bool> TryClaimAsync(OutboxEvent row, CancellationToken ct = default)
         {
@@ -85,11 +85,11 @@ namespace AeroBus.Core.Events
             var result = await _df.ConditionalUpdateAsync(
                 Collection,
                 docId,
-                conditions: new[] { new DocumentForgeCondition("Status", "==", row.Status) },
+                conditions: new[] { new DocumentForgeCondition("status", "==", row.Status) },
                 operations: new[]
                 {
-                    new DocumentForgeMutation("Status", "set", OutboxStatus.Dispatching),
-                    new DocumentForgeMutation("Attempts", "inc", 1),
+                    new DocumentForgeMutation("status", "set", OutboxStatus.Dispatching),
+                    new DocumentForgeMutation("attempts", "inc", 1),
                 },
                 ct);
 
@@ -101,7 +101,7 @@ namespace AeroBus.Core.Events
         /// <summary>Resolve a business Id → DocumentForge internal _id (needed by the CAS claim).</summary>
         private async Task<string?> ResolveIdAsync(Guid id, CancellationToken ct)
         {
-            var rows = await _df.QueryAsync($"SELECT * FROM {Collection} WHERE Id = '{id}'", ct);
+            var rows = await _df.QueryAsync($"SELECT * FROM {Collection} WHERE id = '{id}'", ct);
             if (rows.Count == 0) return null;
             return rows[0].TryGetProperty("_id", out var idEl) && idEl.ValueKind == JsonValueKind.String
                 ? idEl.GetString()

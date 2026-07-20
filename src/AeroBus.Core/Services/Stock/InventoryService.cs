@@ -89,18 +89,18 @@ namespace AeroBus.Core.Services.Stock
 
             // sell:    guard Available >= qty,  ops: dec Available, inc Sold
             // release: guard Sold      >= qty,  ops: inc Available, dec Sold
-            var guardField = sell ? "Available" : "Sold";
+            var guardField = sell ? "available" : "sold";
             var conditions = new[] { new DocumentForgeCondition(guardField, ">=", qty) };
             var operations = sell
                 ? new[]
                 {
-                    new DocumentForgeMutation("Available", "dec", qty),
-                    new DocumentForgeMutation("Sold", "inc", qty),
+                    new DocumentForgeMutation("available", "dec", qty),
+                    new DocumentForgeMutation("sold", "inc", qty),
                 }
                 : new[]
                 {
-                    new DocumentForgeMutation("Available", "inc", qty),
-                    new DocumentForgeMutation("Sold", "dec", qty),
+                    new DocumentForgeMutation("available", "inc", qty),
+                    new DocumentForgeMutation("sold", "dec", qty),
                 };
 
             // Resolve the internal _id (cached), then conditional-update. On a 404
@@ -173,7 +173,7 @@ namespace AeroBus.Core.Services.Stock
             var flightLit = flightId.ToString().Replace("'", "''");
             var bucketLit = bucket.Replace("'", "''");
             var rows = await _df.QueryAsync(
-                $"SELECT * FROM {Collection} WHERE FlightId = '{flightLit}' AND Bucket = '{bucketLit}'", ct);
+                $"SELECT * FROM {Collection} WHERE flightId = '{flightLit}' AND bucket = '{bucketLit}'", ct);
 
             if (rows.Count == 0)
             {
@@ -198,9 +198,9 @@ namespace AeroBus.Core.Services.Stock
             var flightLit = flightId.ToString().Replace("'", "''");
             var bucketLit = bucket.Replace("'", "''");
             var rows = await _df.QueryAsync(
-                $"SELECT * FROM {Collection} WHERE FlightId = '{flightLit}' AND Bucket = '{bucketLit}'", ct);
+                $"SELECT * FROM {Collection} WHERE flightId = '{flightLit}' AND bucket = '{bucketLit}'", ct);
             if (rows.Count == 0) return 0;
-            return rows[0].TryGetProperty("Available", out var availEl) && availEl.ValueKind == JsonValueKind.Number
+            return rows[0].TryGetProperty("available", out var availEl) && availEl.ValueKind == JsonValueKind.Number
                 ? availEl.GetInt32()
                 : 0;
         }

@@ -25,17 +25,17 @@ namespace AeroBus.Core.Repositories.Customer
             _store.GetByIdAsync<Model.Customer.Customer>(C, id, ct);
 
         public Task<IReadOnlyList<Model.Customer.Customer>> GetByCompanyAsync(Guid companyId, CancellationToken ct = default) =>
-            _store.QueryAsync<Model.Customer.Customer>(C, new Dictionary<string, object?> { ["CompanyId"] = companyId }, ct: ct);
+            _store.QueryAsync<Model.Customer.Customer>(C, new Dictionary<string, object?> { ["companyId"] = companyId }, ct: ct);
 
         public Task<Model.Customer.Customer?> GetByNumberAsync(string customerNumber, CancellationToken ct = default) =>
-            _store.GetByFieldAsync<Model.Customer.Customer>(C, "CustomerNumber", customerNumber, ct);
+            _store.GetByFieldAsync<Model.Customer.Customer>(C, "customerNumber", customerNumber, ct);
 
         public Task<IReadOnlyList<Model.Customer.Customer>> ListByCompanyAsync(
             Guid companyId, string? loyaltyProgram, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { ["CompanyId"] = companyId };
-            if (!string.IsNullOrWhiteSpace(loyaltyProgram)) f["LoyaltyProgram"] = loyaltyProgram;
-            if (!string.IsNullOrWhiteSpace(status)) f["Status"] = status;
+            var f = new Dictionary<string, object?> { ["companyId"] = companyId };
+            if (!string.IsNullOrWhiteSpace(loyaltyProgram)) f["loyaltyProgram"] = loyaltyProgram;
+            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
             return _store.QueryAsync<Model.Customer.Customer>(C, f, pageNumber, pageSize, ct);
         }
 

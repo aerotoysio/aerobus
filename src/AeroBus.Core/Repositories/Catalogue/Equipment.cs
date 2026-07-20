@@ -44,8 +44,8 @@ namespace AeroBus.Core.Repositories.Catalogue
             int pageSize,
             CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { ["CompanyId"] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f["Status"] = status;
+            var f = new Dictionary<string, object?> { ["companyId"] = companyId };
+            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
             return QueryAsync(f, pageNumber, pageSize, ct);
         }
 

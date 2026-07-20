@@ -25,6 +25,6 @@ namespace AeroBus.Core.Events
         protected override string Collection => DfCollections.Events.WebhookSubscriptions;
 
         public Task<IReadOnlyList<WebhookSubscription>> GetActiveAsync(CancellationToken ct = default) =>
-            QueryAsync(Eq("Active", true), ct: ct);
+            QueryAsync(Eq("active", true), ct: ct);
     }
 }

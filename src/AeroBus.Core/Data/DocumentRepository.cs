@@ -18,7 +18,7 @@ namespace AeroBus.Core.Data
             Store.GetByIdAsync<T>(Collection, id, ct);
 
         public virtual Task<IReadOnlyList<T>> GetByCompanyAsync(Guid companyId, CancellationToken ct = default) =>
-            Store.QueryAsync<T>(Collection, Eq("CompanyId", companyId), ct: ct);
+            Store.QueryAsync<T>(Collection, Eq("companyId", companyId), ct: ct);
 
         public virtual Task<T?> SaveAsync(T model, CancellationToken ct = default) =>
             Store.UpsertAsync(Collection, model, model.Id, ct);

@@ -50,11 +50,11 @@ namespace AeroBus.Core.Repositories.Catalogue
             int pageSize,
             CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { ["CompanyId"] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f["Status"] = status;
-            if (!string.IsNullOrWhiteSpace(category)) f["Category"] = category;
-            if (!string.IsNullOrWhiteSpace(type)) f["Type"] = type;
-            if (!string.IsNullOrWhiteSpace(scope)) f["Scope"] = scope;
+            var f = new Dictionary<string, object?> { ["companyId"] = companyId };
+            if (!string.IsNullOrWhiteSpace(status)) f["status"] = status;
+            if (!string.IsNullOrWhiteSpace(category)) f["category"] = category;
+            if (!string.IsNullOrWhiteSpace(type)) f["type"] = type;
+            if (!string.IsNullOrWhiteSpace(scope)) f["scope"] = scope;
             return QueryAsync(f, pageNumber, pageSize, ct);
         }
 

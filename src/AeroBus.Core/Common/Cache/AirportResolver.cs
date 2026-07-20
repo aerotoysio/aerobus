@@ -37,7 +37,7 @@ namespace AeroBus.Core.Common.Cache
             // here: the resolver interface is synchronous (deep inside the
             // flight-builder maths) and minimal APIs run without a sync context.
             var fetched = store
-                .QueryAsync<Airport>(DfCollections.Catalogue.Airports, new Dictionary<string, object?> { ["Code"] = code })
+                .QueryAsync<Airport>(DfCollections.Catalogue.Airports, new Dictionary<string, object?> { ["code"] = code })
                 .GetAwaiter().GetResult()
                 .FirstOrDefault();
 
