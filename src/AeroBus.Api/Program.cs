@@ -16,6 +16,18 @@ using AeroBus.Core.Services.Stock;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Dev convenience: a VISIBLE, git-ignored settings file at the repo root
+// (dev-settings.json — copy dev-settings.json.example) wins over everything
+// else in Development, so "which config am I actually running with?" has a
+// one-file answer regardless of how the app was launched (VS F5, dotnet run,
+// run-demo.ps1). Never loaded outside Development.
+if (builder.Environment.IsDevelopment())
+{
+    var repoRoot = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", ".."));
+    builder.Configuration.AddJsonFile(
+        Path.Combine(repoRoot, "dev-settings.json"), optional: true, reloadOnChange: true);
+}
+
 // DocumentForge — the only required external dependency. Everything AeroBus
 // persists goes through IDocumentStore, so a different datasource can be
 // swapped in behind that seam without touching the domain.

@@ -22,3 +22,6 @@ scripts/.env.demo
 ## OS
 Thumbs.db
 .DS_Store
+
+# Visible dev settings (real values) - see dev-settings.json.example
+dev-settings.json

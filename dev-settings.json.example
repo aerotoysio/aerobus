@@ -1,0 +1,19 @@
+{
+  // Copy to dev-settings.json (git-ignored) and fill in. In Development this
+  // file WINS over appsettings, user secrets and environment variables — one
+  // visible place that answers "what is this run pointing at?".
+  // Never loaded outside Development; never commit the filled-in copy.
+  "DocumentForge": {
+    "BaseUrl": "https://documentforge.example",
+    "ApiKey": "df_...",
+    "Database": ""
+  },
+  "Keycloak": {
+    "BaseUrl": "https://auth.example",
+    "Realm": "aerotoys",
+    "ClientSecret": "..."
+  },
+  "RuleForge": {
+    "BaseUrl": "http://localhost:5050"
+  }
+}
