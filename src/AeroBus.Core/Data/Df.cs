@@ -41,5 +41,15 @@ namespace AeroBus.Core.Data
         /// </summary>
         public static string Contains(string term) =>
             "%" + term.Trim().Replace("'", "''") + "%";
+
+        /// <summary>
+        /// OR-of-LIKEs search predicate over the given stored field names,
+        /// parenthesised for direct use in a WHERE clause.
+        /// </summary>
+        public static string Match(string term, params string[] fields)
+        {
+            var pattern = Contains(term);
+            return "(" + string.Join(" OR ", fields.Select(f => $"{f} LIKE '{pattern}'")) + ")";
+        }
     }
 }

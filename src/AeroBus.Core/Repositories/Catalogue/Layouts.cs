@@ -32,9 +32,12 @@ namespace AeroBus.Core.Repositories.Catalogue
         public Task<IReadOnlyList<Layout>> ListByCompanyAsync(
             Guid companyId, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { [Df.Field(nameof(Layout.CompanyId))] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(Layout.Status))] = status;
-            return _store.QueryAsync<Layout>(C, f, pageNumber, pageSize, ct);
+            var where = $"{Df.Field(nameof(Layout.CompanyId))} = '{companyId}'";
+            if (!string.IsNullOrWhiteSpace(status))
+                where += $" AND {Df.Field(nameof(Layout.Status))} = '{status.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(search))
+                where += " AND " + Df.Match(search, Df.Field(nameof(Layout.Name)), Df.Field(nameof(Layout.Type)));
+            return _store.QueryWhereAsync<Layout>(C, where, pageNumber, pageSize, ct);
         }
 
         public async Task<Layout?> SaveAsync(Layout m, CancellationToken ct = default) =>
