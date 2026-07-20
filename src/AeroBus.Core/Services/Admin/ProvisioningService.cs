@@ -26,6 +26,15 @@ namespace AeroBus.Core.Services.Admin
     {
         private static readonly Regex ShortNamePattern = new("^[a-z][a-z0-9]{1,29}$", RegexOptions.Compiled);
 
+        // The short name is the org's database name AND its subdomain
+        // (<shortName>.<baseDomain> — see TenantDatabaseMiddleware), so names the
+        // platform itself needs can never be claimed by a tenant.
+        private static readonly HashSet<string> ReservedShortNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "www", "api", "auth", "admin", "app", "studio", "control", "default",
+            "demo", "docs", "status", "mail", "events", "login", "coffee",
+        };
+
         private readonly IdentityService _identity;
         private readonly IOrganisations _organisations;
         private readonly IDocumentStoreFactory _storeFactory;
@@ -51,6 +60,8 @@ namespace AeroBus.Core.Services.Admin
             var shortName = NormalizeShortName(req.ShortName ?? req.Designator ?? req.OrganizationName);
             if (!ShortNamePattern.IsMatch(shortName))
                 throw new IdentityException(400, "Short name must be 2–30 chars, start with a letter, lowercase letters/digits only.");
+            if (ReservedShortNames.Contains(shortName))
+                throw new IdentityException(409, $"'{shortName}' is a reserved name — pick a different short name.");
             if (await _organisations.GetByShortNameAsync(shortName, ct) is not null)
                 throw new IdentityException(409, $"A tenant database named '{shortName}' already exists.");
 

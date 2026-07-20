@@ -19,6 +19,7 @@ namespace AeroBus.Core.Services.Admin
     public sealed class PlatformConfigSeeder(
         IServiceScopeFactory scopes,
         IOptions<RuleForgeOptions> ruleForge,
+        IOptions<Data.TenancyOptions> tenancy,
         ILogger<PlatformConfigSeeder> log) : IHostedService
     {
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -38,6 +39,9 @@ namespace AeroBus.Core.Services.Admin
                 await config.SeedIfMissingAsync(
                     PlatformRuleForgeSettingsProvider.TimeoutKey, b.TimeoutMs.ToString(), isSecret: false,
                     "Per-call RuleForge timeout in milliseconds.", cancellationToken);
+                await config.SeedIfMissingAsync(
+                    "tenancy.baseDomain", tenancy.Value.BaseDomain, isSecret: false,
+                    "Base domain for subdomain tenancy (<shortName>.<baseDomain>); empty disables Host-based resolution.", cancellationToken);
             }
             catch (Exception ex)
             {
