@@ -18,6 +18,24 @@ namespace AeroBus.Api.Endpoints.Order
     {
         public static RouteGroupBuilder OrderMapping(this RouteGroupBuilder group)
         {
+            // List: the caller's company's orders, newest first, paged; search
+            // matches the public order id (VF...). Powers the aerodesk Orders
+            // board and the aerostudio orders section.
+            group.MapGet("/", async (
+                [FromServices] AeroBus.Core.Repositories.Order.IOrders orders,
+                ClaimsPrincipal user,
+                [FromQuery] string? status,
+                [FromQuery] string? search,
+                [FromQuery] int? pageNumber,
+                [FromQuery] int? pageSize,
+                CancellationToken ct) =>
+            {
+                var companyId = user.GetCompanyId();
+                var page = Math.Max(1, pageNumber.GetValueOrDefault(1));
+                var size = Math.Clamp(pageSize.GetValueOrDefault(50), 1, 200);
+                return Results.Ok(await orders.ListByCompanyAsync(companyId, status, search, page, size, ct));
+            });
+
             // Create: bind an order against a shopped offer + bundle, secure seats
             // atomically, and confirm. 200 with the order view on success; 409 with
             // {reason} when inventory can't be secured or policy denies; 404 when the
