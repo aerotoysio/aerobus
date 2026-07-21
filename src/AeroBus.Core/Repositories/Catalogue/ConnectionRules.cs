@@ -40,8 +40,16 @@ namespace AeroBus.Core.Repositories.Catalogue
             string? search,
             int pageNumber,
             int pageSize,
-            CancellationToken ct = default) =>
-            QueryAsync(Eq(Df.Field(nameof(ConnectionRule.CompanyId)), companyId), pageNumber, pageSize, ct);
+            CancellationToken ct = default)
+        {
+            var where = $"{Df.Field(nameof(ConnectionRule.CompanyId))} = '{companyId}'";
+            if (!string.IsNullOrWhiteSpace(search))
+                where += " AND " + Df.Match(search,
+                    Df.Field(nameof(ConnectionRule.AirportCode)),
+                    Df.Field(nameof(ConnectionRule.Carrier)),
+                    Df.Field(nameof(ConnectionRule.ConnType)));
+            return QueryWhereAsync(where, pageNumber, pageSize, ct);
+        }
 
         public Task<bool> DeleteAsync(
             Guid id,

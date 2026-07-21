@@ -24,10 +24,13 @@ namespace AeroBus.Core.Repositories.Catalogue
         public Task<IReadOnlyList<MarketZone>> SearchAsync(
             Guid? companyId, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?>();
-            if (companyId is { } cid) f[Df.Field(nameof(MarketZone.CompanyId))] = cid;
-            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(MarketZone.Status))] = status;
-            return QueryAsync(f, pageNumber, pageSize, ct);
+            var clauses = new List<string>();
+            if (companyId is { } cid) clauses.Add($"{Df.Field(nameof(MarketZone.CompanyId))} = '{cid}'");
+            if (!string.IsNullOrWhiteSpace(status))
+                clauses.Add($"{Df.Field(nameof(MarketZone.Status))} = '{status.Replace("'", "''")}'");
+            if (!string.IsNullOrWhiteSpace(search))
+                clauses.Add(Df.Match(search, Df.Field(nameof(MarketZone.Name)), Df.Field(nameof(MarketZone.Description))));
+            return QueryWhereAsync(string.Join(" AND ", clauses), pageNumber, pageSize, ct);
         }
 
         public Task<bool> DeleteAsync(Guid id, Guid concurrencyId, CancellationToken ct = default) =>

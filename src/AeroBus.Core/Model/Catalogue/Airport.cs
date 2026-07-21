@@ -12,7 +12,7 @@ namespace AeroBus.Core.Model.Catalogue
         public Guid? CountryId { get; init; }
         public string? TimeZoneId { get; init; }
         public decimal? Latitude { get; init; }
-        public decimal? Longitude { get; init; }
+        public decimal? Longitude { get; init; } 
         public string? Terminals { get; init; }
         public string? Tags { get; init; }
         public JsonNode? Data { get; init; }
