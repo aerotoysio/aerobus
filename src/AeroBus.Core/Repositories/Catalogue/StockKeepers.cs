@@ -50,12 +50,18 @@ namespace AeroBus.Core.Repositories.Catalogue
             int pageSize,
             CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { [Df.Field(nameof(StockKeeper.CompanyId))] = companyId };
-            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(StockKeeper.Status))] = status;
-            if (!string.IsNullOrWhiteSpace(category)) f[Df.Field(nameof(StockKeeper.Category))] = category;
-            if (!string.IsNullOrWhiteSpace(type)) f[Df.Field(nameof(StockKeeper.Type))] = type;
-            if (!string.IsNullOrWhiteSpace(scope)) f[Df.Field(nameof(StockKeeper.Scope))] = scope;
-            return QueryAsync(f, pageNumber, pageSize, ct);
+            var where = $"{Df.Field(nameof(StockKeeper.CompanyId))} = '{companyId}'";
+            if (!string.IsNullOrWhiteSpace(status))
+                where += $" AND {Df.Field(nameof(StockKeeper.Status))} = '{status.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(category))
+                where += $" AND {Df.Field(nameof(StockKeeper.Category))} = '{category.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(type))
+                where += $" AND {Df.Field(nameof(StockKeeper.Type))} = '{type.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(scope))
+                where += $" AND {Df.Field(nameof(StockKeeper.Scope))} = '{scope.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(search))
+                where += " AND " + Df.Match(search, Df.Field(nameof(StockKeeper.Name)), Df.Field(nameof(StockKeeper.Category)));
+            return QueryWhereAsync(where, pageNumber, pageSize, ct);
         }
 
         public Task<bool> DeleteAsync(
