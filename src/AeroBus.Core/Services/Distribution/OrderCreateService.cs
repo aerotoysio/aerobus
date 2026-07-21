@@ -128,11 +128,29 @@ namespace AeroBus.Core.Services.Distribution
 
             foreach (var (flightId, bucket) in legs)
             {
+                var securedBucket = bucket;
                 var sell = await _inventory.SellAsync(company.Id, flightId, bucket, seats, ct);
+
+                // Layout-less flights carry ONE "ALL" inventory bucket. A shop
+                // with a cabin preference stamps the solution cabin (Y/J) as the
+                // bucket, which has no inventory document on such flights — fall
+                // back to ALL and re-bucket the order's flight services so a
+                // later cancel releases the seats where they were sold.
+                if (!sell.Success && sell.Reason == "noInventory" &&
+                    !string.Equals(bucket, "ALL", StringComparison.OrdinalIgnoreCase))
+                {
+                    sell = await _inventory.SellAsync(company.Id, flightId, "ALL", seats, ct);
+                    if (sell.Success)
+                    {
+                        securedBucket = "ALL";
+                        RebucketFlightServices(order, flightId, "ALL");
+                    }
+                }
+
                 if (sell.Success)
                     await _events.PublishAsync("inventory.adjusted",
                         new EventSubject(DfCollections.Stock.FlightInventory, flightId.ToString()),
-                        new { flightId, bucket, delta = -seats, reason = "order.create" },
+                        new { flightId, bucket = securedBucket, delta = -seats, reason = "order.create" },
                         company.Id, actor: "order-create", ct);
                 if (!sell.Success)
                 {
@@ -142,7 +160,7 @@ namespace AeroBus.Core.Services.Distribution
                         company.Id, seats, flightId, bucket, sell.Reason, sold.Count);
                     return OrderCreateResult.Fail(sell.Reason, $"Could not book {seats} seat(s) on flight {flightId} ({bucket}): {sell.Reason}.");
                 }
-                sold.Add((flightId, bucket));
+                sold.Add((flightId, securedBucket));
             }
 
             // All legs sold — confirm and persist. The order is one document, so
@@ -371,6 +389,22 @@ namespace AeroBus.Core.Services.Distribution
                 .Where(g => g != Guid.Empty)
                 .Distinct()
                 .ToList();
+
+        /// <summary>Point every flight service for <paramref name="flightId"/> at
+        /// <paramref name="bucket"/> — used when the sell fell back to the ALL
+        /// bucket, so release targets where the seats actually came from.</summary>
+        private static void RebucketFlightServices(OrderModel order, Guid flightId, string bucket)
+        {
+            foreach (var item in order.OrderItems ?? new List<OrderItem>())
+                foreach (var service in item.Services ?? new List<Service>())
+                {
+                    var list = service.FlightServices;
+                    if (list is null) continue;
+                    for (var i = 0; i < list.Count; i++)
+                        if (list[i].FlightId == flightId)
+                            list[i] = list[i] with { Bucket = bucket };
+                }
+        }
 
         /// <summary>Distinct (FlightId, Bucket) legs across the order's flight services.</summary>
         private static List<(Guid FlightId, string Bucket)> DistinctLegs(OrderModel order) =>
