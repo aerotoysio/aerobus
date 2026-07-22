@@ -5,6 +5,7 @@ using AeroBus.Core.Model.Order;
 using AeroBus.Core.Repositories.Admin;
 using AeroBus.Core.Repositories.Distribution;
 using AeroBus.Core.Repositories.Order;
+using AeroBus.Core.Services.Customer;
 using AeroBus.Core.Rules;
 using AeroBus.Core.Services.Operations;
 using AeroBus.Core.Services.Stock;
@@ -39,6 +40,7 @@ namespace AeroBus.Core.Services.Distribution
         private readonly DecisionRunner _decisions;
         private readonly IEventPublisher _events;
         private readonly IManifestBuilder _manifest;
+        private readonly CustomerLinker _customerLinker;
         private readonly ILogger<OrderCreateService> _log;
 
         public OrderCreateService(
@@ -49,6 +51,7 @@ namespace AeroBus.Core.Services.Distribution
             DecisionRunner decisions,
             IEventPublisher events,
             IManifestBuilder manifest,
+            CustomerLinker customerLinker,
             ILogger<OrderCreateService> log)
         {
             _companies = companies;
@@ -58,6 +61,7 @@ namespace AeroBus.Core.Services.Distribution
             _decisions = decisions;
             _events = events;
             _manifest = manifest;
+            _customerLinker = customerLinker;
             _log = log;
         }
 
@@ -117,6 +121,12 @@ namespace AeroBus.Core.Services.Distribution
 
             // ── build the order aggregate (still Pending) ─────────────────────
             var order = BuildOrder(request, company, offer, picks);
+
+            // Single identity: link each passenger to the customers collection
+            // (create-or-link by email / phone + surname); the lead becomes the
+            // order's profile. Best-effort — never fails the booking.
+            var profileId = await _customerLinker.LinkAsync(company.Id, request.Passengers, ct);
+            if (profileId is { } pid) order = order with { ProfileId = pid };
 
             // ── decrement inventory for every flight leg BEFORE confirming ────
             // One seat per passenger per (flight, bucket). Sell each leg in turn;

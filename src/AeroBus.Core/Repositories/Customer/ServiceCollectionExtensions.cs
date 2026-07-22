@@ -14,6 +14,9 @@ namespace AeroBus.Core.Repositories.Customer
             services.AddScoped<ICustomers, Customers>();
             services.AddScoped<CustomersService>();
 
+            // The single-identity pattern: order create links passengers to customers.
+            services.AddScoped<Services.Customer.CustomerLinker>();
+
             return services;
         }
     }

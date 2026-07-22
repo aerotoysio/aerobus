@@ -7,6 +7,13 @@ namespace AeroBus.Core.Repositories.Customer
         Task<Model.Customer.Customer?> GetByIdAsync(Guid id, CancellationToken ct = default);
         Task<IReadOnlyList<Model.Customer.Customer>> GetByCompanyAsync(Guid companyId, CancellationToken ct = default);
         Task<Model.Customer.Customer?> GetByNumberAsync(string customerNumber, CancellationToken ct = default);
+
+        /// <summary>Identity match by email (case-insensitive), company-scoped.</summary>
+        Task<Model.Customer.Customer?> FindByEmailAsync(Guid companyId, string email, CancellationToken ct = default);
+
+        /// <summary>Identity match by phone + surname (case-insensitive), company-scoped.</summary>
+        Task<Model.Customer.Customer?> FindByPhoneAndLastNameAsync(
+            Guid companyId, string phone, string lastName, CancellationToken ct = default);
         Task<IReadOnlyList<Model.Customer.Customer>> ListByCompanyAsync(
             Guid companyId, string? loyaltyProgram, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default);
         Task<Model.Customer.Customer?> SaveAsync(Model.Customer.Customer model, CancellationToken ct = default);
@@ -29,6 +36,31 @@ namespace AeroBus.Core.Repositories.Customer
 
         public Task<Model.Customer.Customer?> GetByNumberAsync(string customerNumber, CancellationToken ct = default) =>
             _store.GetByFieldAsync<Model.Customer.Customer>(C, Df.Field(nameof(Model.Customer.Customer.CustomerNumber)), customerNumber, ct);
+
+        // Identity lookups use LIKE with NO wildcards: DocumentForge LIKE is
+        // case-insensitive, so this is a case-insensitive equality — emails and
+        // names match however they were originally cased.
+        private static string CiEq(string field, string value) =>
+            $"{field} LIKE '{value.Trim().Replace("'", "''")}'";
+
+        public async Task<Model.Customer.Customer?> FindByEmailAsync(
+            Guid companyId, string email, CancellationToken ct = default)
+        {
+            var where = $"{Df.CompanyId} = '{companyId}' AND " +
+                        CiEq(Df.Field(nameof(Model.Customer.Customer.Email)), email);
+            var rows = await _store.QueryWhereAsync<Model.Customer.Customer>(C, where, 1, 1, ct);
+            return rows.Count > 0 ? rows[0] : null;
+        }
+
+        public async Task<Model.Customer.Customer?> FindByPhoneAndLastNameAsync(
+            Guid companyId, string phone, string lastName, CancellationToken ct = default)
+        {
+            var where = $"{Df.CompanyId} = '{companyId}' AND " +
+                        CiEq(Df.Field(nameof(Model.Customer.Customer.Phone)), phone) + " AND " +
+                        CiEq(Df.Field(nameof(Model.Customer.Customer.LastName)), lastName);
+            var rows = await _store.QueryWhereAsync<Model.Customer.Customer>(C, where, 1, 1, ct);
+            return rows.Count > 0 ? rows[0] : null;
+        }
 
         public Task<IReadOnlyList<Model.Customer.Customer>> ListByCompanyAsync(
             Guid companyId, string? loyaltyProgram, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
