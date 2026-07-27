@@ -11,8 +11,9 @@ namespace AeroBus.Core.Rules
         /// <summary>Config section name.</summary>
         public const string SectionName = "RuleForge";
 
-        /// <summary>Base URL of the RuleForge HTTP service (dev default port 5050).</summary>
-        public string BaseUrl { get; set; } = "http://localhost:5050";
+        /// <summary>Where the engine runs: "embedded" (default — in-process, no
+        /// separate service) or the base URL of a standalone RuleForge host.</summary>
+        public string BaseUrl { get; set; } = "embedded";
 
         /// <summary>
         /// Shared secret sent as the <c>X-AERO-Key</c> header on every request.
@@ -25,6 +26,9 @@ namespace AeroBus.Core.Rules
         /// warm hot path is sub-millisecond, so a slow response means a problem
         /// and the caller should fall back rather than block the shop.</summary>
         public int TimeoutMs { get; set; } = 2000;
+
+        /// <summary>Environment whose ruleBindings pin rule versions (embedded engine).</summary>
+        public string Env { get; set; } = "dev";
 
         /// <summary>
         /// Named decision-point endpoints. Defaults match the RuleForge routes
