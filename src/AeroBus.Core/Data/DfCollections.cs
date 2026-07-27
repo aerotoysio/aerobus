@@ -38,6 +38,7 @@ namespace AeroBus.Core.Data
             public const string ConnectionRules = "catalogue.connectionrules";
             public const string Products = "catalogue.products";
             public const string Bundles = "catalogue.bundles";
+            public const string LoyaltyTiers = "catalogue.loyaltytiers";
             public const string Attributes = "catalogue.attributes";
             public const string Media = "catalogue.media";
             public const string StockKeepers = "catalogue.stockkeeper";

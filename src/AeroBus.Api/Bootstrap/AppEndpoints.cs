@@ -54,6 +54,7 @@ namespace AeroBus.Api.Bootstrap
             // market-zone-selectors are embedded in the market zone document (no standalone endpoint).
 
             app.MapGroup("/catalogue/equipment").WithTags("Catalogue").CatalogueEquipmentMapping().RequireAuthorization("catalogue.view");
+            app.MapGroup("/catalogue/loyalty-tiers").WithTags("Catalogue").CatalogueLoyaltyTiersMapping().RequireAuthorization("catalogue.view");
             // layout-compartments + seats + seat-types are embedded in the Layout aggregate document.
             app.MapGroup("/catalogue/layouts").WithTags("Catalogue").CatalogueLayoutsMapping().RequireAuthorization("catalogue.view");
             app.MapGroup("/catalogue/schedules").WithTags("Catalogue").CatalogueSchedulesMapping().RequireAuthorization("catalogue.view");
