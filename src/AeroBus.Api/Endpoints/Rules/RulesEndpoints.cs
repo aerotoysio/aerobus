@@ -36,6 +36,27 @@ namespace AeroBus.Api.Endpoints.Rules
             group.MapDelete("/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
                 await svc.DeleteRuleAsync(id, ct) ? Results.NoContent() : Results.NotFound());
 
+            // Test console: evaluate the current DRAFT in-process against a
+            // request payload. Debug defaults ON — the console exists to show
+            // the trace. Never touches published bindings or live traffic.
+            group.MapPost("/{id}/test", async (
+                string id,
+                [FromBody] JsonElement request,
+                [FromQuery] bool? debug,
+                [FromServices] RuleAuthoringService svc,
+                [FromServices] AeroBus.Core.Rules.EmbeddedRuleForgeClient embedded,
+                CancellationToken ct) =>
+            {
+                var rule = await svc.GetRuleAsync(id, ct);
+                if (rule is null) return Results.NotFound();
+                try
+                {
+                    var envelope = await embedded.EvaluateDraftAsync(rule.Value, request, debug ?? true, ct);
+                    return Results.Ok(envelope);
+                }
+                catch (Exception ex) { return Results.BadRequest(new { error = ex.Message }); }
+            });
+
             group.MapPost("/{id}/publish", async (
                 string id, [FromQuery] string? env, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
             {

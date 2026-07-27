@@ -79,6 +79,56 @@ public class EmbeddedRuleEngineTests(DocumentForgeFixture fx)
     }
 
     [Fact]
+    public async Task Draft_test_console_evaluates_the_rule_document_directly()
+    {
+        await SeedRuleAsync();
+
+        var services = new ServiceCollection();
+        services.AddScoped<IRuleForgeSettingsProvider, StaticSettingsScope>();
+        var provider = services.BuildServiceProvider();
+
+        await using var embedded = new EmbeddedRuleForgeClient(
+            new Opt<AeroBus.Core.Data.DocumentForgeOptions>(new AeroBus.Core.Data.DocumentForgeOptions
+            {
+                BaseUrl = fx.BaseUrl,
+                ApiKey = Environment.GetEnvironmentVariable("DOCUMENTFORGE_APIKEY") ?? "",
+            }),
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<EmbeddedRuleForgeClient>.Instance);
+
+        // The DRAFT document (not a published snapshot) evaluates as-is,
+        // with the trace present because the console defaults debug on.
+        var rule = JsonDocument.Parse(File.ReadAllText(Rules("rule-shop-bundles.json"))).RootElement;
+        var request = JsonSerializer.SerializeToElement(new
+        {
+            searchContext = new { currency = "AED", origin = "SYD", destination = "MEL" },
+            flightSolution = new
+            {
+                id = Guid.NewGuid(),
+                origin = "SYD",
+                destination = "MEL",
+                cabin = "Y",
+                elapsedDurationMinutes = 95,
+                legs = new[] { new { flightRef = Guid.NewGuid().ToString(), marketingCarrier = "SM", from = "SYD", to = "MEL" } },
+            },
+            paxIds = new[] { Guid.NewGuid() },
+            bundles = new[]
+            {
+                new { id = Guid.NewGuid(), code = "LITE", name = "Lite", description = (string?)null,
+                      category = (string?)null, products = Array.Empty<object>() },
+            },
+            products = Array.Empty<object>(),
+        });
+
+        var envelope = await embedded.EvaluateDraftAsync(rule, request, debug: true);
+
+        Assert.Equal(Decision.Apply, envelope.Decision);
+        Assert.Equal("rule-shop-bundles", envelope.RuleId);
+        Assert.NotNull(envelope.Result);
+        Assert.NotNull(envelope.Trace);
+    }
+
+    [Fact]
     public async Task Embedded_engine_prices_the_real_shop_bundles_rule()
     {
         await SeedRuleAsync();
