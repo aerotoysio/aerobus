@@ -37,6 +37,9 @@ namespace AeroBus.Core.Repositories.Catalogue
             services.AddScoped<IEquipment, EquipmentRepo>();
             services.AddScoped<EquipmentService>();
 
+            services.AddScoped<ILoyaltyTiers, LoyaltyTiers>();
+            services.AddScoped<LoyaltyTiersService>();
+
             services.AddScoped<IFlightBuilder, FlightBuilder>();
             services.AddScoped<FlightBuilderService>();
 
