@@ -35,15 +35,15 @@ public class OrderListTests(DocumentForgeFixture fx)
             CompanyId = other, Created = DateTime.UtcNow,
         });
 
-        var all = await repo.ListByCompanyAsync(company, status: null, search: null, 1, 50);
+        var all = await repo.ListByCompanyAsync(company, status: null, search: null, profileId: null, 1, 50);
         Assert.Equal(3, all.Count);
         Assert.Equal("VF0CCC0003", all[0].OrderId); // newest first
         Assert.All(all, o => Assert.Equal(company, o.CompanyId));
 
-        var confirmed = await repo.ListByCompanyAsync(company, "Confirmed", null, 1, 50);
+        var confirmed = await repo.ListByCompanyAsync(company, "Confirmed", null, null, 1, 50);
         Assert.Equal(2, confirmed.Count);
 
-        var byId = await repo.ListByCompanyAsync(company, null, "bbb", 1, 50);
+        var byId = await repo.ListByCompanyAsync(company, null, "bbb", null, 1, 50);
         Assert.Equal("VF0BBB0002", Assert.Single(byId).OrderId);
     }
 }
