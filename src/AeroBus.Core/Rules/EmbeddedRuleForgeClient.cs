@@ -90,6 +90,33 @@ namespace AeroBus.Core.Rules
                    ?? throw new InvalidOperationException($"Embedded evaluation of {path} produced an unreadable envelope.");
         }
 
+        /// <summary>
+        /// Evaluate a rule DOCUMENT as-is — the authoring test console runs the
+        /// current draft (not the published snapshot) in-process, whatever engine
+        /// the platform routes real traffic to. Sub-rules and reference sets
+        /// still resolve through the published DocumentForge sources.
+        /// </summary>
+        public async Task<RuleForgeEnvelope> EvaluateDraftAsync(
+            JsonElement ruleJson, JsonElement request, bool debug = false, CancellationToken ct = default)
+        {
+            var settings = await SettingsAsync(ct).ConfigureAwait(false);
+            var parts = PartsFor(settings.Env);
+
+            var rule = ruleJson.Deserialize<RuleForge.Core.Models.Rule>(AeroJson.Options)
+                       ?? throw new InvalidOperationException("The rule document could not be read as a rule.");
+
+            var envelope = await _runner.RunAsync(rule, request, new RuleRunner.Options(
+                Debug: debug,
+                SubRuleSource: parts.Rules,
+                ReferenceSetSource: parts.RefSets,
+                HttpClient: _http,
+                RedactTraceErrors: true), ct).ConfigureAwait(false);
+
+            var json = JsonSerializer.Serialize(envelope, AeroJson.Options);
+            return JsonSerializer.Deserialize<RuleForgeEnvelope>(json, AeroJson.Options)
+                   ?? throw new InvalidOperationException($"Test evaluation of rule '{rule.Id}' produced an unreadable envelope.");
+        }
+
         public async Task<bool> HealthAsync(CancellationToken ct = default)
         {
             try
