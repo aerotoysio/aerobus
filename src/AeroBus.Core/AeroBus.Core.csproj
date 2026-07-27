@@ -10,6 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\RuleForge.Core\RuleForge.Core.csproj" />
+    <ProjectReference Include="..\RuleForge.DocumentForge\RuleForge.DocumentForge.csproj" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
   </ItemGroup>

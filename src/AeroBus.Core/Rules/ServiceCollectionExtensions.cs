@@ -24,7 +24,13 @@ namespace AeroBus.Core.Rules
             // Connection settings resolve per call from platform config
             // (database-held, admin-editable) with this section as bootstrap.
             services.AddScoped<IRuleForgeSettingsProvider, PlatformRuleForgeSettingsProvider>();
-            services.AddHttpClient<IRuleForgeClient, RuleForgeClient>();
+
+            // The engine: EMBEDDED in-process by default (base URL "embedded" or
+            // blank), or the standalone RuleForge host when a URL is configured —
+            // routed per call, switchable at runtime from Platform Settings.
+            services.AddSingleton<EmbeddedRuleForgeClient>();
+            services.AddHttpClient<RuleForgeClient>();
+            services.AddScoped<IRuleForgeClient, RoutedRuleForgeClient>();
             services.AddScoped<DecisionRunner>();
             return services;
         }

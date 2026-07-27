@@ -41,7 +41,7 @@ Override any key with an environment variable using `Section__Key` (double under
 | --- | --- | --- |
 | `DocumentForge` | `BaseUrl`, `ApiKey`, `Database`, `ControlDatabase` | The datastore. `Database` is the **static fallback** DB; authenticated org requests are routed to the org's own `db/{shortName}` by the tenancy middleware (see README "Multi-tenancy") |
 | `Keycloak` | `BaseUrl`, `Realm`, `ClientId` (=`aerobus`), `ClientSecret`, `Audience` (=`aerobus`) | JWT validation (`{BaseUrl}/realms/{Realm}` issuer, `aud=aerobus`) **and** the admin service account used to create orgs/users. Leaving `BaseUrl`/`Realm` empty disables the Keycloak scheme (dev API-key-only mode) |
-| `RuleForge` | `BaseUrl`, `ApiKey`, `TimeoutMs`, `Endpoints:*` | **Bootstrap fallback only** — the runtime values live in platform config (above); this section covers dev/tests and first-start seeding |
+| `RuleForge` | `BaseUrl` (default **embedded**), `ApiKey`, `TimeoutMs`, `Env`, `Endpoints:*` | Bootstrap fallback only — runtime values live in platform config. `ruleforge.baseUrl` = `embedded` (or blank) runs the RULE ENGINE IN-PROCESS (vendored RuleForge.Core, no separate service); a URL calls a standalone RuleForge host |
 | `Events` | *(optional)* `PollSeconds`, `MaxAttempts`, `BackoffBaseSeconds`, `BackoffCapSeconds`, `BatchSize`, `WebhookTimeoutSeconds`, `RetentionDays` | Outbox dispatcher; all defaulted, runs unconfigured |
 
 Docker Compose (`docker-compose.yml` + `.env` from `.env.example`) wires `DFDB_API_KEY` and

@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/AeroBus.Core/AeroBus.Core.csproj" />
+    <Project Path="src/RuleForge.Core/RuleForge.Core.csproj" />
+    <Project Path="src/RuleForge.DocumentForge/RuleForge.DocumentForge.csproj" />
     <Project Path="src/AeroBus.Api/AeroBus.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">

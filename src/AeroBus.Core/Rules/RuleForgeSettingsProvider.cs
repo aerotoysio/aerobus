@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 namespace AeroBus.Core.Rules
 {
     /// <summary>Effective RuleForge connection settings, resolved per call.</summary>
-    public sealed record RuleForgeSettings(string BaseUrl, string ApiKey, int TimeoutMs);
+    public sealed record RuleForgeSettings(string BaseUrl, string ApiKey, int TimeoutMs, string Env = "dev");
 
     /// <summary>
     /// Where the RuleForge client gets its connection settings. Settings live in
@@ -26,6 +26,7 @@ namespace AeroBus.Core.Rules
         public const string BaseUrlKey = "ruleforge.baseUrl";
         public const string ApiKeyKey = "ruleforge.apiKey";
         public const string TimeoutKey = "ruleforge.timeoutMs";
+        public const string EnvKey = "ruleforge.env";
 
         public async Task<RuleForgeSettings> GetAsync(CancellationToken ct = default)
         {
@@ -35,7 +36,8 @@ namespace AeroBus.Core.Rules
             var timeoutMs = int.TryParse(await config.GetAsync(TimeoutKey, ct), out var t) && t > 0
                 ? t
                 : b.TimeoutMs;
-            return new RuleForgeSettings(baseUrl, apiKey, timeoutMs <= 0 ? 2000 : timeoutMs);
+            var env = await config.GetOrDefaultAsync(EnvKey, b.Env, ct);
+            return new RuleForgeSettings(baseUrl, apiKey, timeoutMs <= 0 ? 2000 : timeoutMs, env);
         }
     }
 
