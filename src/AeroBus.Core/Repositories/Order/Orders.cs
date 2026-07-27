@@ -11,7 +11,7 @@ namespace AeroBus.Core.Repositories.Order
 
         /// <summary>Paged order list for the caller's company, newest first; search matches the public order id.</summary>
         Task<IReadOnlyList<Model.Order.Order>> ListByCompanyAsync(
-            Guid companyId, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default);
+            Guid companyId, string? status, string? search, Guid? profileId, int pageNumber, int pageSize, CancellationToken ct = default);
         Task<Model.Order.Order?> SaveAsync(Model.Order.Order model, CancellationToken ct = default);
         Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
     }
@@ -31,9 +31,11 @@ namespace AeroBus.Core.Repositories.Order
             GetByFieldAsync(Df.Field(nameof(Model.Order.Order.OrderId)), orderId, ct);
 
         public Task<IReadOnlyList<Model.Order.Order>> ListByCompanyAsync(
-            Guid companyId, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
+            Guid companyId, string? status, string? search, Guid? profileId, int pageNumber, int pageSize, CancellationToken ct = default)
         {
             var where = $"{Df.Field(nameof(Model.Order.Order.CompanyId))} = '{companyId}'";
+            if (profileId is { } pid)
+                where += $" AND {Df.Field(nameof(Model.Order.Order.ProfileId))} = '{pid}'";
             if (!string.IsNullOrWhiteSpace(status))
                 where += $" AND {Df.Field(nameof(Model.Order.Order.Status))} = '{status.Replace("'", "''")}'";
             if (!string.IsNullOrWhiteSpace(search))

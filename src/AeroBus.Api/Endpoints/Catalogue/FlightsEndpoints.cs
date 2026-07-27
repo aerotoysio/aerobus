@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AeroBus.Core.Model;
 using AeroBus.Core.Model.Catalogue;
 using AeroBus.Core.Security;
 using AeroBus.Core.Services.Catalogue;
@@ -26,6 +27,7 @@ namespace AeroBus.Api.Endpoints.Catalogue
                 [FromQuery] string? status,
                 [FromQuery] string? departureStation,
                 [FromQuery] string? arrivalStation,
+                [FromQuery] Guid? scheduleId,
                 [FromQuery] string? search,
                 [FromQuery] int? pageNumber,
                 [FromQuery] int? pageSize) =>
@@ -33,6 +35,24 @@ namespace AeroBus.Api.Endpoints.Catalogue
                 var companyId = user.GetCompanyId();
                 var page = pageNumber.GetValueOrDefault(1);
                 var size = pageSize.GetValueOrDefault(50);
+
+                // A schedule's built flights — the "affected flights" view from
+                // the flight builder. Company-checked like every other read.
+                if (scheduleId is { } sid)
+                {
+                    var bySchedule = await svc.GetByScheduleIdAsync(sid);
+                    var mine = bySchedule
+                        .Where(f => f.CompanyId == companyId)
+                        .OrderBy(f => f.DepartureDateTimeLocal)
+                        .ToList();
+                    return Results.Ok(new PagedResult<Flight>
+                    {
+                        Items = mine.Skip((page - 1) * size).Take(size).ToList(),
+                        TotalCount = mine.Count,
+                        PageNumber = page,
+                        PageSize = size,
+                    });
+                }
 
                 var result = await svc.ListByCompanyPagedAsync(
                     companyId,

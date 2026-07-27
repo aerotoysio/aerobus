@@ -13,6 +13,9 @@ namespace AeroBus.Core.Services.Catalogue
             CancellationToken ct = default) =>
             _repo.GetByIdAsync(id, ct);
 
+        public Task<IReadOnlyList<Flight>> GetByScheduleIdAsync(Guid scheduleId, CancellationToken ct = default) =>
+            repo.GetByScheduleIdAsync(scheduleId, ct);
+
         public Task<IReadOnlyList<Flight>> GetByCompanyAsync(
             Guid companyId,
             CancellationToken ct = default) =>

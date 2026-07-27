@@ -26,6 +26,7 @@ namespace AeroBus.Api.Endpoints.Order
                 ClaimsPrincipal user,
                 [FromQuery] string? status,
                 [FromQuery] string? search,
+                [FromQuery] Guid? profileId,
                 [FromQuery] int? pageNumber,
                 [FromQuery] int? pageSize,
                 CancellationToken ct) =>
@@ -33,7 +34,7 @@ namespace AeroBus.Api.Endpoints.Order
                 var companyId = user.GetCompanyId();
                 var page = Math.Max(1, pageNumber.GetValueOrDefault(1));
                 var size = Math.Clamp(pageSize.GetValueOrDefault(50), 1, 200);
-                return Results.Ok(await orders.ListByCompanyAsync(companyId, status, search, page, size, ct));
+                return Results.Ok(await orders.ListByCompanyAsync(companyId, status, search, profileId, page, size, ct));
             });
 
             // Create: bind an order against a shopped offer + bundle, secure seats
