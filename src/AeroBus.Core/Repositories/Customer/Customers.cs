@@ -65,10 +65,18 @@ namespace AeroBus.Core.Repositories.Customer
         public Task<IReadOnlyList<Model.Customer.Customer>> ListByCompanyAsync(
             Guid companyId, string? loyaltyProgram, string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var f = new Dictionary<string, object?> { [Df.Field(nameof(Model.Customer.Customer.CompanyId))] = companyId };
-            if (!string.IsNullOrWhiteSpace(loyaltyProgram)) f[Df.Field(nameof(Model.Customer.Customer.LoyaltyProgram))] = loyaltyProgram;
-            if (!string.IsNullOrWhiteSpace(status)) f[Df.Field(nameof(Model.Customer.Customer.Status))] = status;
-            return _store.QueryAsync<Model.Customer.Customer>(C, f, pageNumber, pageSize, ct);
+            var where = $"{Df.CompanyId} = '{companyId}'";
+            if (!string.IsNullOrWhiteSpace(loyaltyProgram))
+                where += $" AND {Df.Field(nameof(Model.Customer.Customer.LoyaltyProgram))} = '{loyaltyProgram.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(status))
+                where += $" AND {Df.Field(nameof(Model.Customer.Customer.Status))} = '{status.Replace("'", "''")}'";
+            if (!string.IsNullOrWhiteSpace(search))
+                where += " AND " + Df.Match(search,
+                    Df.Field(nameof(Model.Customer.Customer.FirstName)),
+                    Df.Field(nameof(Model.Customer.Customer.LastName)),
+                    Df.Field(nameof(Model.Customer.Customer.Email)),
+                    Df.Field(nameof(Model.Customer.Customer.CustomerNumber)));
+            return _store.QueryWhereAsync<Model.Customer.Customer>(C, where, pageNumber, pageSize, ct);
         }
 
         public async Task<Model.Customer.Customer?> SaveAsync(Model.Customer.Customer m, CancellationToken ct = default) =>
