@@ -11,6 +11,14 @@ namespace AeroBus.Core.Model.Distribution
 
     // ─── request ────────────────────────────────────────────────────────────
 
+    /// <summary>The à-la-carte request: priced extras for a selected Right to Fly.</summary>
+    public sealed class OfferOptionsRequest
+    {
+        public Guid OfferId { get; set; }
+        public Guid FlightSolutionId { get; set; }
+        public string? RtfCode { get; set; }
+    }
+
     public sealed class OfferShopRequest
     {
         public SearchContext? SearchContext { get; set; }
@@ -32,6 +40,9 @@ namespace AeroBus.Core.Model.Distribution
         public string? Name { get; set; }
         public string? Type { get; set; }   // ADT/CHD/INF etc
         public int Age { get; set; }
+
+        /// <summary>Loyalty tier code (e.g. GOLD) — feeds RTF eligibility and policy rules.</summary>
+        public string? LoyaltyTier { get; set; }
     }
 
     public sealed class SearchCriteria
@@ -122,6 +133,10 @@ namespace AeroBus.Core.Model.Distribution
         public string? Name { get; set; }
         public string? Description { get; set; }
         public bool Included { get; set; }
+
+        /// <summary>Unit price for à-la-carte items; null when included/free.</summary>
+        public decimal? Price { get; set; }
+        public int Quantity { get; set; } = 1;
     }
 
     // ─── price summary ────────────────────────────────────────────────────────

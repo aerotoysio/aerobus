@@ -26,6 +26,25 @@ namespace AeroBus.Api.Endpoints.Offer
                 return Results.Ok(response);
             });
 
+            // Options (à la carte): after a Right to Fly is selected on a
+            // shopped offer, the same connected policies run with mode=optional
+            // and return the PRICED extras (Shape 3 of rule-based-retailing).
+            group.MapPost("/options", async (
+                [FromBody] OfferOptionsRequest request,
+                [FromServices] OfferOptionsService svc,
+                ClaimsPrincipal user,
+                CancellationToken ct) =>
+            {
+                var companyId = user.GetCompanyId();
+                try
+                {
+                    var result = await svc.GetOptionsAsync(
+                        companyId, request.OfferId, request.FlightSolutionId, request.RtfCode ?? "", ct);
+                    return Results.Ok(result);
+                }
+                catch (KeyNotFoundException ex) { return Results.NotFound(new { error = ex.Message }); }
+            });
+
             // Price: re-price a previously shopped offer via the OfferPricing
             // decision. Keeps the ooms /offer/price route (which was a stub).
             group.MapPost("/price", async (
