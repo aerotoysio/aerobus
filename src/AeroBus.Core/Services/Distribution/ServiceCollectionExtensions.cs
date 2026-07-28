@@ -15,7 +15,13 @@ namespace AeroBus.Core.Services.Distribution
         public static IServiceCollection AddOffer(this IServiceCollection services)
         {
             services.AddScoped<IOffers, Offers>();
-            services.AddScoped<IShopBundleBuilder, RuleForgeShopBundleBuilder>();
+            // Concrete + interface resolve to the SAME scoped instance — the
+            // options service reuses the builder's policy orchestration.
+            services.AddScoped<RuleForgeShopBundleBuilder>();
+            services.AddScoped<IShopBundleBuilder>(sp =>
+                Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                    .GetRequiredService<RuleForgeShopBundleBuilder>(sp));
+            services.AddScoped<OfferOptionsService>();
             services.AddScoped<OfferShopService>();
             services.AddScoped<OfferPriceService>();
             return services;
