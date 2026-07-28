@@ -44,11 +44,15 @@ namespace AeroBus.Core.Services.Rules
 
         // ─── rules ────────────────────────────────────────────────────────────
 
-        public async Task<IReadOnlyList<JsonElement>> ListRulesAsync(string? status, CancellationToken ct = default)
+        public async Task<IReadOnlyList<JsonElement>> ListRulesAsync(
+            string? status, string? category = null, CancellationToken ct = default)
         {
+            var clauses = new List<string>();
+            if (!string.IsNullOrWhiteSpace(status)) clauses.Add($"status = '{Escape(status)}'");
+            if (!string.IsNullOrWhiteSpace(category)) clauses.Add($"category = '{Escape(category)}'");
+
             var sql = $"SELECT * FROM {RulesCollection}";
-            if (!string.IsNullOrWhiteSpace(status))
-                sql += $" WHERE status = '{Escape(status)}'";
+            if (clauses.Count > 0) sql += " WHERE " + string.Join(" AND ", clauses);
             return await _df.QueryAsync(sql, ct);
         }
 

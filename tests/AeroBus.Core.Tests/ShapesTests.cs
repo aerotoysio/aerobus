@@ -11,10 +11,10 @@ namespace AeroBus.Core.Tests;
 /// <c>shapes</c> collection, lazily seeded with the three defaults, editable
 /// through the authoring service.
 /// </summary>
-[Collection("documentforge")]
-public class ShapesTests(DocumentForgeFixture fx)
+/// <summary>Inert engine/event stubs shared by authoring-service tests.</summary>
+public static class ShapesTestsStubs
 {
-    private sealed class NoRuleForge : IRuleForgeClient
+    public sealed class NoRuleForge : IRuleForgeClient
     {
         public Task<RuleForgeEnvelope> EvaluateAsync(string endpoint, object payload, bool debug = false, CancellationToken ct = default) =>
             throw new NotSupportedException();
@@ -22,13 +22,18 @@ public class ShapesTests(DocumentForgeFixture fx)
         public Task<bool> RefreshAsync(CancellationToken ct = default) => Task.FromResult(true);
     }
 
-    private sealed class NoEvents : IEventPublisher
+    public sealed class NoEvents : IEventPublisher
     {
         public Task<OutboxEvent?> PublishAsync(string type, EventSubject subject, object data, Guid? companyId, string? actor = null, CancellationToken ct = default) =>
             Task.FromResult<OutboxEvent?>(null);
     }
+}
 
-    private RuleAuthoringService Service() => new(fx.Client, new NoRuleForge(), new NoEvents());
+[Collection("documentforge")]
+public class ShapesTests(DocumentForgeFixture fx)
+{
+    private RuleAuthoringService Service() =>
+        new(fx.Client, new ShapesTestsStubs.NoRuleForge(), new ShapesTestsStubs.NoEvents());
 
     [Fact]
     public async Task Shapes_seed_lazily_and_round_trip_edits()
