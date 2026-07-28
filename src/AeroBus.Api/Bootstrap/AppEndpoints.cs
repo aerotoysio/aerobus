@@ -55,6 +55,7 @@ namespace AeroBus.Api.Bootstrap
 
             app.MapGroup("/catalogue/equipment").WithTags("Catalogue").CatalogueEquipmentMapping().RequireAuthorization("catalogue.view");
             app.MapGroup("/catalogue/loyalty-tiers").WithTags("Catalogue").CatalogueLoyaltyTiersMapping().RequireAuthorization("catalogue.view");
+            app.MapGroup("/catalogue/right-to-fly").WithTags("Catalogue").CatalogueRightToFlyMapping().RequireAuthorization("catalogue.view");
             // layout-compartments + seats + seat-types are embedded in the Layout aggregate document.
             app.MapGroup("/catalogue/layouts").WithTags("Catalogue").CatalogueLayoutsMapping().RequireAuthorization("catalogue.view");
             app.MapGroup("/catalogue/schedules").WithTags("Catalogue").CatalogueSchedulesMapping().RequireAuthorization("catalogue.view");

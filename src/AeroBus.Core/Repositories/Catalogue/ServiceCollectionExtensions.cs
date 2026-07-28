@@ -40,6 +40,9 @@ namespace AeroBus.Core.Repositories.Catalogue
             services.AddScoped<ILoyaltyTiers, LoyaltyTiers>();
             services.AddScoped<LoyaltyTiersService>();
 
+            services.AddScoped<IRightsToFly, RightsToFly>();
+            services.AddScoped<RightToFlyService>();
+
             services.AddScoped<IFlightBuilder, FlightBuilder>();
             services.AddScoped<FlightBuilderService>();
 
