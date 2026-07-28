@@ -16,8 +16,8 @@ namespace AeroBus.Api.Endpoints.Rules
         public static RouteGroupBuilder RulesMapping(this RouteGroupBuilder group)
         {
             // ── rules ──────────────────────────────────────────────────────────
-            group.MapGet("/", async ([FromQuery] string? status, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
-                Results.Ok(await svc.ListRulesAsync(status, ct)));
+            group.MapGet("/", async ([FromQuery] string? status, [FromQuery] string? category, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+                Results.Ok(await svc.ListRulesAsync(status, category, ct)));
 
             group.MapGet("/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
                 (await svc.GetRuleAsync(id, ct)) is { } r ? Results.Ok(r) : Results.NotFound());
