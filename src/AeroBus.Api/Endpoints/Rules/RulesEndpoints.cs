@@ -68,6 +68,27 @@ namespace AeroBus.Api.Endpoints.Rules
                 catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
             });
 
+            // ── input shapes ───────────────────────────────────────────────────
+            group.MapGet("/shapes", async ([FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+                Results.Ok(await svc.ListShapesAsync(ct)));
+
+            group.MapGet("/shapes/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+                (await svc.GetShapeAsync(id, ct)) is { } s ? Results.Ok(s) : Results.NotFound());
+
+            group.MapPut("/shapes/{id}", async (string id, [FromBody] JsonElement body, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+            {
+                try
+                {
+                    var node = JsonNode.Parse(body.GetRawText())!;
+                    var saved = await svc.UpsertShapeAsync(id, node, ct);
+                    return Results.Ok(JsonNode.Parse(saved.ToJsonString()));
+                }
+                catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+            });
+
+            group.MapDelete("/shapes/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+                await svc.DeleteShapeAsync(id, ct) ? Results.NoContent() : Results.NotFound());
+
             // ── reference sets ─────────────────────────────────────────────────
             group.MapGet("/reference-sets/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
                 (await svc.GetReferenceSetAsync(id, ct)) is { } r ? Results.Ok(r) : Results.NotFound());

@@ -15,10 +15,12 @@ collection names follow it.
 | **Flight Solution** | The physical output of the flight/connection builder: legs that get the customer A→B. No brands, no pricing. | Produced by shop (exists) |
 | **Customer** | The customer object — or an anonymous "1 ADT" — fed into every rule as input. | `customers.customers` (exists) |
 
-**The crux**: a Policy is not a new engine concept. The embedded RuleForge engine already
-supports **sub-rule calls** (`ruleRef` nodes with input/output mapping). *Connecting a
-Policy to a Right to Fly = the RTF's benefits rule contains a `ruleRef` node that calls
-`policy-baggage`.* One engine, no new evaluator — the Policy is just a rule other rules call.
+**The crux**: a Policy is not a new engine concept — it's a plain rule. **For now the
+connection is managed OUTSIDE the rules** (decided 2026-07-28): the RTF record lists its
+`PolicyIds`, and *aerobus orchestrates* — at benefits time it calls each connected policy
+rule directly with the Shape 2 request and merges the outputs. No `ruleRef` sub-rule
+nodes yet; the engine supports them, and we can move the orchestration inside rules
+later if composing policies from policies ever becomes worth the complexity.
 
 ## How a shop works (target flow)
 
@@ -41,10 +43,12 @@ convention every policy follows.
 
 ## Rule engine input shapes
 
-Generic mapping is the eternal struggle, so the shapes are FIXED contracts. A small
-**shape registry** in aerobus (served at `GET /rules/shapes`) declares each shape's known
-paths + types + sensible operators; the Studio rule editor reads it so authors pick fields
-from a list instead of typing JSON paths.
+Generic mapping is the eternal struggle, so the shapes are DECLARED contracts —
+**stored documents** (flat `shapes` collection beside the rules), seeded with the three
+defaults below and **editable in AeroStudio's settings** (fields: path, type, label,
+suggested values; plus a sample payload for the test console). Served at
+`GET /rules/shapes`; the rule editor maps a rule to a shape (`shapeId` on the rule doc)
+and drives its filter field pickers and value suggestions from the shape's fields.
 
 **Shape 1 — Shopping Engine** (`shopping`):
 
