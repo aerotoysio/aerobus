@@ -24,6 +24,7 @@ namespace AeroBus.Core.Services.Rules
         public const string EnvironmentsCollection = "environments";
         public const string ReferenceSetsCollection = "referencesets";
         public const string ReferenceSetVersionsCollection = "referencesetversions";
+        public const string ShapesCollection = "shapes";
 
         private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
 
@@ -134,6 +135,46 @@ namespace AeroBus.Core.Services.Rules
 
             return new PublishResult(id, next, env, refreshed);
         }
+
+        // ─── input shapes ─────────────────────────────────────────────────────
+        // Declared request contracts (docs/rule-based-retailing.md): each shape
+        // lists known field paths + types + suggested values and a sample
+        // payload. The Studio rule editor maps a rule to a shape (shapeId) and
+        // drives its field pickers from these documents.
+
+        /// <summary>List shapes, lazily seeding the three defaults on first use.</summary>
+        public async Task<IReadOnlyList<JsonElement>> ListShapesAsync(CancellationToken ct = default)
+        {
+            var rows = await _df.QueryAsync($"SELECT * FROM {ShapesCollection}", ct);
+            if (rows.Count > 0) return rows;
+
+            foreach (var json in ShapeDefaults.All)
+                await _df.InsertAsync(ShapesCollection, json, ct);
+            return await _df.QueryAsync($"SELECT * FROM {ShapesCollection}", ct);
+        }
+
+        public Task<JsonElement?> GetShapeAsync(string id, CancellationToken ct = default) =>
+            _df.GetByFieldAsync(ShapesCollection, "id", id, ct);
+
+        public async Task<JsonNode> UpsertShapeAsync(string id, JsonNode body, CancellationToken ct = default)
+        {
+            var obj = body.AsObject();
+            var bodyId = obj["id"]?.GetValue<string>();
+            if (!string.Equals(bodyId, id, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Body id '{bodyId}' does not match route id '{id}'.");
+            if (obj["fields"] is not JsonArray)
+                throw new InvalidOperationException("A shape must carry a 'fields' array (path/type/label/values).");
+
+            var existing = await _df.GetByFieldAsync(ShapesCollection, "id", id, ct);
+            if (existing is not null)
+                await _df.ReplaceByFieldAsync(ShapesCollection, "id", id, obj.ToJsonString(), ct);
+            else
+                await _df.InsertAsync(ShapesCollection, obj.ToJsonString(), ct);
+            return obj;
+        }
+
+        public Task<bool> DeleteShapeAsync(string id, CancellationToken ct = default) =>
+            _df.DeleteByFieldAsync(ShapesCollection, "id", id, ct);
 
         // ─── reference sets ───────────────────────────────────────────────────
 
