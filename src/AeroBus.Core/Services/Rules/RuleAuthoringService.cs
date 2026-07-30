@@ -26,6 +26,7 @@ namespace AeroBus.Core.Services.Rules
         public const string ReferenceSetVersionsCollection = "referencesetversions";
         public const string ShapesCollection = "shapes";
         public const string NodeTemplatesCollection = "nodetemplates";
+        public const string ShapeScenariosCollection = "shapescenarios";
 
         private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
 
@@ -198,6 +199,56 @@ namespace AeroBus.Core.Services.Rules
 
         public Task<bool> DeleteShapeAsync(string id, CancellationToken ct = default) =>
             _df.DeleteByFieldAsync(ShapesCollection, "id", id, ct);
+
+        // ─── shape test scenarios ─────────────────────────────────────────────
+        // Saved requests for the Shape Test Lab: each scenario belongs to a
+        // shape and runs against the rules mapped to that shape.
+
+        public async Task<IReadOnlyList<JsonElement>> ListScenariosAsync(string shapeId, CancellationToken ct = default)
+        {
+            var rows = await _df.QueryAsync(
+                $"SELECT * FROM {ShapeScenariosCollection} WHERE shapeId = '{Escape(shapeId)}'", ct);
+            if (rows.Count > 0) return rows;
+
+            // First visit: seed a starter scenario from the shape's sample so
+            // the lab is runnable immediately.
+            var shape = await GetShapeAsync(shapeId, ct);
+            if (shape is not { } s || !s.TryGetProperty("sample", out var sample)) return rows;
+
+            var seed = new JsonObject
+            {
+                ["id"] = $"scenario-{shapeId}-sample",
+                ["shapeId"] = shapeId,
+                ["name"] = "Shape sample",
+                ["description"] = "Seeded from the shape's sample payload.",
+                ["request"] = JsonNode.Parse(sample.GetRawText()),
+            };
+            await _df.InsertAsync(ShapeScenariosCollection, seed.ToJsonString(), ct);
+            return await _df.QueryAsync(
+                $"SELECT * FROM {ShapeScenariosCollection} WHERE shapeId = '{Escape(shapeId)}'", ct);
+        }
+
+        public async Task<JsonNode> UpsertScenarioAsync(string id, JsonNode body, CancellationToken ct = default)
+        {
+            var obj = body.AsObject();
+            var bodyId = obj["id"]?.GetValue<string>();
+            if (!string.Equals(bodyId, id, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Body id '{bodyId}' does not match route id '{id}'.");
+            if (string.IsNullOrWhiteSpace(obj["shapeId"]?.GetValue<string>()))
+                throw new InvalidOperationException("A scenario must name its shapeId.");
+            if (obj["request"] is null)
+                throw new InvalidOperationException("A scenario must carry a request payload.");
+
+            var existing = await _df.GetByFieldAsync(ShapeScenariosCollection, "id", id, ct);
+            if (existing is not null)
+                await _df.ReplaceByFieldAsync(ShapeScenariosCollection, "id", id, obj.ToJsonString(), ct);
+            else
+                await _df.InsertAsync(ShapeScenariosCollection, obj.ToJsonString(), ct);
+            return obj;
+        }
+
+        public Task<bool> DeleteScenarioAsync(string id, CancellationToken ct = default) =>
+            _df.DeleteByFieldAsync(ShapeScenariosCollection, "id", id, ct);
 
         // ─── node templates (specialised/composite nodes) ─────────────────────
 
