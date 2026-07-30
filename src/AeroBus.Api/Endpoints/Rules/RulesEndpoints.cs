@@ -36,6 +36,25 @@ namespace AeroBus.Api.Endpoints.Rules
             group.MapDelete("/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
                 await svc.DeleteRuleAsync(id, ct) ? Results.NoContent() : Results.NotFound());
 
+            // Compiled view: the draft with its composite nodes expanded into
+            // primitives — exactly what publish would snapshot and the engine
+            // would run. Read-only; nothing is stored.
+            group.MapGet("/{id}/compiled", async (
+                string id,
+                [FromServices] RuleAuthoringService svc,
+                CancellationToken ct) =>
+            {
+                var rule = await svc.GetRuleAsync(id, ct);
+                if (rule is null) return Results.NotFound();
+                try
+                {
+                    var expanded = await svc.ExpandCompositesAsync(
+                        JsonNode.Parse(rule.Value.GetRawText())!.AsObject(), ct);
+                    return Results.Ok(JsonNode.Parse(expanded.ToJsonString()));
+                }
+                catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+            });
+
             // Test console: evaluate the current DRAFT in-process against a
             // request payload. Debug defaults ON — the console exists to show
             // the trace. Never touches published bindings or live traffic.
