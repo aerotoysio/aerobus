@@ -93,6 +93,24 @@ namespace AeroBus.Api.Endpoints.Rules
             group.MapDelete("/shapes/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
                 await svc.DeleteShapeAsync(id, ct) ? Results.NoContent() : Results.NotFound());
 
+            // ── shape test scenarios ───────────────────────────────────────────
+            group.MapGet("/shapes/{shapeId}/scenarios", async (string shapeId, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+                Results.Ok(await svc.ListScenariosAsync(shapeId, ct)));
+
+            group.MapPut("/shapes/scenarios/{id}", async (string id, [FromBody] JsonElement body, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+            {
+                try
+                {
+                    var node = JsonNode.Parse(body.GetRawText())!;
+                    var saved = await svc.UpsertScenarioAsync(id, node, ct);
+                    return Results.Ok(JsonNode.Parse(saved.ToJsonString()));
+                }
+                catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+            });
+
+            group.MapDelete("/shapes/scenarios/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+                await svc.DeleteScenarioAsync(id, ct) ? Results.NoContent() : Results.NotFound());
+
             // ── node templates (specialised nodes) ─────────────────────────────
             group.MapGet("/node-templates", async ([FromServices] RuleAuthoringService svc, CancellationToken ct) =>
                 Results.Ok(await svc.ListNodeTemplatesAsync(ct)));
