@@ -225,14 +225,15 @@ namespace AeroBus.Core.Services.Distribution
             CancellationToken ct)
         {
             var items = new List<BundleServiceItem>();
+            var payload = await ToPolicyContractAsync(
+                mode, rtf, passengers, flightSolution, origin, destination, currency, ct);
             foreach (var policyId in rtf.PolicyIds ?? [])
             {
                 var endpoint = await ResolveEndpointAsync(policyId, ct);
                 if (endpoint is null) continue;
                 try
                 {
-                    var envelope = await _ruleForge.EvaluateAsync(
-                        endpoint, ShapePayload(mode, rtf, passengers, flightSolution, origin, destination, currency), ct: ct);
+                    var envelope = await _ruleForge.EvaluateAsync(endpoint, payload, ct: ct);
                     if (envelope.Decision != Decision.Apply || envelope.Result is not { } result) continue;
                     items.AddRange(MapPolicyProducts(result, included: mode == "included"));
                 }
@@ -271,6 +272,45 @@ namespace AeroBus.Core.Services.Distribution
                     Price = price > 0m ? price : null,
                     Quantity = qty > 0 ? qty : 1,
                 };
+            }
+        }
+
+        /// <summary>
+        /// Build the caller-shape request and PROJECT it into the canonical
+        /// policy contract (ShapeProjector) — one policy serves every shape.
+        /// Falls back to the raw request when the shapes can't be loaded.
+        /// </summary>
+        private async Task<object> ToPolicyContractAsync(
+            string mode,
+            RightToFly rtf,
+            IReadOnlyList<OfferShopPassenger> passengers,
+            ShoppingFlightSolution flightSolution,
+            string origin, string destination, string currency,
+            CancellationToken ct)
+        {
+            var raw = ShapePayload(mode, rtf, passengers, flightSolution, origin, destination, currency);
+            try
+            {
+                var shapeId = mode == "optional" ? "a-la-carte" : "rtf-benefits";
+                var shape = await _authoring.GetShapeAsync(shapeId, ct);
+                var canonical = await _authoring.GetShapeAsync("policy-input", ct);
+                if (shape is null || canonical is null) return raw;
+
+                var request = JsonSerializer.SerializeToElement(raw);
+                var projected = Rules.ShapeProjector.Project(request, shape.Value, canonical.Value);
+
+                // The contract's scalar passthroughs (mode, rightToFly) ride on
+                // shape fields; keep them present even if a shape drops them.
+                var node = System.Text.Json.Nodes.JsonNode.Parse(projected.GetRawText())!.AsObject();
+                node["mode"] ??= mode;
+                node["rightToFly"] ??= System.Text.Json.Nodes.JsonNode.Parse(
+                    JsonSerializer.Serialize(new { code = rtf.RtfCode, name = rtf.RtfName }));
+                return JsonSerializer.Deserialize<JsonElement>(node.ToJsonString());
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "Policy contract projection failed for {Mode}; sending the raw request.", mode);
+                return raw;
             }
         }
 

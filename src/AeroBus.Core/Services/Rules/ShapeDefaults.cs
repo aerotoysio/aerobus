@@ -14,6 +14,7 @@ namespace AeroBus.Core.Services.Rules
             { "path": "searchContext.currency", "type": "string", "label": "Currency" },
             { "path": "searchContext.origin", "type": "string", "label": "Search origin" },
             { "path": "searchContext.destination", "type": "string", "label": "Search destination" },
+            { "path": "customers.id", "type": "string", "label": "Passenger id" },
             { "path": "customers.type", "type": "string", "label": "Passenger type", "values": ["ADT", "CHD", "INF"] },
             { "path": "customers.age", "type": "number", "label": "Passenger age" },
             { "path": "customers.loyaltyTier", "type": "string", "label": "Loyalty tier" },
@@ -70,6 +71,26 @@ namespace AeroBus.Core.Services.Rules
             }
             """;
 
+        /// <summary>
+        /// The CANONICAL policy contract (docs/rule-based-retailing.md): every
+        /// Policy is authored against this one array-shaped form, and every
+        /// caller's shape PROJECTS its request into it before evaluation. A
+        /// shape field maps to a canonical field explicitly (its "concept"
+        /// property) or implicitly when its path matches a canonical path.
+        /// </summary>
+        public static string PolicyInputJson => $$"""
+            {
+              "id": "policy-input",
+              "name": "Policy Contract",
+              "description": "The canonical, array-shaped input every Policy is authored against. Caller shapes project into this form, so one policy serves every channel and request shape.",
+              "fields": [ {{CustomerAndSearchFields}},
+                { "path": "rightToFly.code", "type": "string", "label": "Right to Fly code" },
+                { "path": "maxSpend", "type": "number", "label": "Max spend" }
+              ],
+              "sample": { "mode": "included", "rightToFly": { "code": "SAVER", "name": "Saver" }, {{SampleShoppingCore}} }
+            }
+            """;
+
         public static string ALaCarteJson => $$"""
             {
               "id": "a-la-carte",
@@ -83,6 +104,6 @@ namespace AeroBus.Core.Services.Rules
             }
             """;
 
-        public static IReadOnlyList<string> All => [ShoppingJson, RtfBenefitsJson, ALaCarteJson];
+        public static IReadOnlyList<string> All => [ShoppingJson, RtfBenefitsJson, ALaCarteJson, PolicyInputJson];
     }
 }

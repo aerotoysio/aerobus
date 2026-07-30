@@ -146,15 +146,28 @@ namespace AeroBus.Core.Services.Rules
         // payload. The Studio rule editor maps a rule to a shape (shapeId) and
         // drives its field pickers from these documents.
 
-        /// <summary>List shapes, lazily seeding the three defaults on first use.</summary>
+        /// <summary>
+        /// List shapes, lazily seeding any MISSING default (by id) — so a new
+        /// default (e.g. the canonical policy contract) appears on existing
+        /// installs without touching shapes the airline has edited.
+        /// </summary>
         public async Task<IReadOnlyList<JsonElement>> ListShapesAsync(CancellationToken ct = default)
         {
             var rows = await _df.QueryAsync($"SELECT * FROM {ShapesCollection}", ct);
-            if (rows.Count > 0) return rows;
+            var present = rows
+                .Select(r => r.TryGetProperty("id", out var id) ? id.GetString() : null)
+                .Where(id => id is not null)
+                .ToHashSet(StringComparer.Ordinal);
 
+            var seeded = false;
             foreach (var json in ShapeDefaults.All)
+            {
+                var id = JsonDocument.Parse(json).RootElement.GetProperty("id").GetString();
+                if (present.Contains(id)) continue;
                 await _df.InsertAsync(ShapesCollection, json, ct);
-            return await _df.QueryAsync($"SELECT * FROM {ShapesCollection}", ct);
+                seeded = true;
+            }
+            return seeded ? await _df.QueryAsync($"SELECT * FROM {ShapesCollection}", ct) : rows;
         }
 
         public Task<JsonElement?> GetShapeAsync(string id, CancellationToken ct = default) =>
