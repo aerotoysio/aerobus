@@ -46,7 +46,7 @@ convention every policy follows.
 Generic mapping is the eternal struggle, so it is a first-class layer (2026-07-29):
 
 - **Policies are authored against ONE canonical contract** — the seeded
-   shape. It is ALWAYS array-shaped (, even for one
+  `policy-input` shape. It is ALWAYS array-shaped (`customers[]`, even for one
   customer), so a policy never changes because a caller sends one passenger or five;
   "any customer is Gold" vs "a bag per Gold customer" is an authoring choice
   (arraySelector vs iterator), not a shape concern.
@@ -58,7 +58,7 @@ Generic mapping is the eternal struggle, so it is a first-class layer (2026-07-2
   primitives — it never learns about shapes.
 - **Authoring is label-driven**: the policy editor's field picker lists the
   contract's labels ("Loyalty tier", "Request mode"), never paths or JSON.
-- Non-policy rules still map to a caller shape directly ( on the rule
+- Non-policy rules still map to a caller shape directly (`shapeId` on the rule
   doc) and drive their pickers and test-console samples from it.
 
 **Shape 1 — Shopping Engine** (`shopping`):
