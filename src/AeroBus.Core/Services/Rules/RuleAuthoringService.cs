@@ -25,21 +25,25 @@ namespace AeroBus.Core.Services.Rules
         public const string ReferenceSetsCollection = "referencesets";
         public const string ReferenceSetVersionsCollection = "referencesetversions";
         public const string ShapesCollection = "shapes";
+        public const string NodeTemplatesCollection = "nodetemplates";
 
         private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
 
         private readonly IDocumentForgeClient _df;
         private readonly IRuleForgeClient _ruleForge;
         private readonly IEventPublisher _events;
+        private readonly Repositories.Catalogue.IMarketZones? _marketZones;
 
         public RuleAuthoringService(
             [Microsoft.Extensions.DependencyInjection.FromKeyedServices(Data.ServiceCollectionExtensions.RulesClientKey)] IDocumentForgeClient df,
             IRuleForgeClient ruleForge,
-            IEventPublisher events)
+            IEventPublisher events,
+            Repositories.Catalogue.IMarketZones? marketZones = null)
         {
             _df = df;
             _ruleForge = ruleForge;
             _events = events;
+            _marketZones = marketZones;
         }
 
         // ─── rules ────────────────────────────────────────────────────────────
@@ -107,7 +111,9 @@ namespace AeroBus.Core.Services.Rules
             var next = current + 1;
 
             // Immutable version snapshot — the loader reads {ruleId, version, snapshot}.
-            var snapshot = JsonNode.Parse(rule.ToJsonString())!.AsObject();
+            // Composite nodes COMPILE here: the draft keeps the friendly node,
+            // the snapshot carries the expanded primitives the engine runs.
+            var snapshot = await ExpandCompositesAsync(JsonNode.Parse(rule.ToJsonString())!.AsObject(), ct);
             snapshot["currentVersion"] = next;
             snapshot["status"] = "published";
             var versionDoc = new JsonObject
@@ -192,6 +198,77 @@ namespace AeroBus.Core.Services.Rules
 
         public Task<bool> DeleteShapeAsync(string id, CancellationToken ct = default) =>
             _df.DeleteByFieldAsync(ShapesCollection, "id", id, ct);
+
+        // ─── node templates (specialised/composite nodes) ─────────────────────
+
+        public async Task<IReadOnlyList<JsonElement>> ListNodeTemplatesAsync(CancellationToken ct = default)
+        {
+            var rows = await _df.QueryAsync($"SELECT * FROM {NodeTemplatesCollection}", ct);
+            var present = rows
+                .Select(r => r.TryGetProperty("id", out var id) ? id.GetString() : null)
+                .Where(id => id is not null)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var seeded = false;
+            foreach (var json in NodeTemplateDefaults.All)
+            {
+                var id = JsonDocument.Parse(json).RootElement.GetProperty("id").GetString();
+                if (present.Contains(id)) continue;
+                await _df.InsertAsync(NodeTemplatesCollection, json, ct);
+                seeded = true;
+            }
+            return seeded ? await _df.QueryAsync($"SELECT * FROM {NodeTemplatesCollection}", ct) : rows;
+        }
+
+        public Task<JsonElement?> GetNodeTemplateAsync(string id, CancellationToken ct = default) =>
+            _df.GetByFieldAsync(NodeTemplatesCollection, "id", id, ct);
+
+        public async Task<JsonNode> UpsertNodeTemplateAsync(string id, JsonNode body, CancellationToken ct = default)
+        {
+            var obj = body.AsObject();
+            var bodyId = obj["id"]?.GetValue<string>();
+            if (!string.Equals(bodyId, id, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Body id '{bodyId}' does not match route id '{id}'.");
+            if (obj["expansion"] is null)
+                throw new InvalidOperationException("A node template must carry an 'expansion' subgraph.");
+
+            var existing = await _df.GetByFieldAsync(NodeTemplatesCollection, "id", id, ct);
+            if (existing is not null)
+                await _df.ReplaceByFieldAsync(NodeTemplatesCollection, "id", id, obj.ToJsonString(), ct);
+            else
+                await _df.InsertAsync(NodeTemplatesCollection, obj.ToJsonString(), ct);
+            return obj;
+        }
+
+        public Task<bool> DeleteNodeTemplateAsync(string id, CancellationToken ct = default) =>
+            _df.DeleteByFieldAsync(NodeTemplatesCollection, "id", id, ct);
+
+        /// <summary>
+        /// Expand any composite nodes in the rule into their primitive
+        /// subgraphs (market zone params resolve to the zone's BUILT airport
+        /// list). Ran at publish and test time — drafts keep the friendly node.
+        /// </summary>
+        public async Task<JsonObject> ExpandCompositesAsync(JsonObject rule, CancellationToken ct = default)
+        {
+            if (!CompositeNodeExpander.HasComposites(rule)) return rule;
+            return await CompositeNodeExpander.ExpandAsync(
+                rule,
+                templateId => GetNodeTemplateAsync(templateId, ct),
+                async zoneId =>
+                {
+                    if (_marketZones is null || !Guid.TryParse(zoneId, out var id))
+                        throw new InvalidOperationException($"'{zoneId}' is not a market zone id.");
+                    var zone = await _marketZones.GetByIdAsync(id, ct)
+                               ?? throw new InvalidOperationException($"Market zone {zoneId} was not found.");
+                    var airports = (zone.IncludedAirports ?? "")
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    if (airports.Length == 0)
+                        throw new InvalidOperationException(
+                            $"Market zone '{zone.Name ?? zoneId}' has no built airports — run Build on the zone first.");
+                    return airports;
+                },
+                ct);
+        }
 
         // ─── reference sets ───────────────────────────────────────────────────
 

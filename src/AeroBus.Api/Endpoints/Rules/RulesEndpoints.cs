@@ -51,7 +51,11 @@ namespace AeroBus.Api.Endpoints.Rules
                 if (rule is null) return Results.NotFound();
                 try
                 {
-                    var envelope = await embedded.EvaluateDraftAsync(rule.Value, request, debug ?? true, ct);
+                    // Composites compile before the engine sees the draft.
+                    var expanded = await svc.ExpandCompositesAsync(
+                        JsonNode.Parse(rule.Value.GetRawText())!.AsObject(), ct);
+                    var ruleJson = JsonSerializer.Deserialize<JsonElement>(expanded.ToJsonString());
+                    var envelope = await embedded.EvaluateDraftAsync(ruleJson, request, debug ?? true, ct);
                     return Results.Ok(envelope);
                 }
                 catch (Exception ex) { return Results.BadRequest(new { error = ex.Message }); }
@@ -88,6 +92,27 @@ namespace AeroBus.Api.Endpoints.Rules
 
             group.MapDelete("/shapes/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
                 await svc.DeleteShapeAsync(id, ct) ? Results.NoContent() : Results.NotFound());
+
+            // ── node templates (specialised nodes) ─────────────────────────────
+            group.MapGet("/node-templates", async ([FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+                Results.Ok(await svc.ListNodeTemplatesAsync(ct)));
+
+            group.MapGet("/node-templates/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+                (await svc.GetNodeTemplateAsync(id, ct)) is { } t ? Results.Ok(t) : Results.NotFound());
+
+            group.MapPut("/node-templates/{id}", async (string id, [FromBody] JsonElement body, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+            {
+                try
+                {
+                    var node = JsonNode.Parse(body.GetRawText())!;
+                    var saved = await svc.UpsertNodeTemplateAsync(id, node, ct);
+                    return Results.Ok(JsonNode.Parse(saved.ToJsonString()));
+                }
+                catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+            });
+
+            group.MapDelete("/node-templates/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
+                await svc.DeleteNodeTemplateAsync(id, ct) ? Results.NoContent() : Results.NotFound());
 
             // ── reference sets ─────────────────────────────────────────────────
             group.MapGet("/reference-sets/{id}", async (string id, [FromServices] RuleAuthoringService svc, CancellationToken ct) =>
