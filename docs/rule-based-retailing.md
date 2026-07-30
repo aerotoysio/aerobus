@@ -43,12 +43,23 @@ convention every policy follows.
 
 ## Rule engine input shapes
 
-Generic mapping is the eternal struggle, so the shapes are DECLARED contracts —
-**stored documents** (flat `shapes` collection beside the rules), seeded with the three
-defaults below and **editable in AeroStudio's settings** (fields: path, type, label,
-suggested values; plus a sample payload for the test console). Served at
-`GET /rules/shapes`; the rule editor maps a rule to a shape (`shapeId` on the rule doc)
-and drives its filter field pickers and value suggestions from the shape's fields.
+Generic mapping is the eternal struggle, so it is a first-class layer (2026-07-29):
+
+- **Policies are authored against ONE canonical contract** — the seeded
+   shape. It is ALWAYS array-shaped (, even for one
+  customer), so a policy never changes because a caller sends one passenger or five;
+  "any customer is Gold" vs "a bag per Gold customer" is an authoring choice
+  (arraySelector vs iterator), not a shape concern.
+- **Caller shapes PROJECT into the contract**: each shape field maps to a canonical
+  field — implicitly when its path already matches, or explicitly via the field's
+  "Maps to (Policy Contract)" dropdown in the Studio shape editor. At policy time
+  aerobus runs ShapeProjector (extract → lift singletons to arrays → derive paxIds)
+  and evaluates the policy on the projected request. The ENGINE stays pure
+  primitives — it never learns about shapes.
+- **Authoring is label-driven**: the policy editor's field picker lists the
+  contract's labels ("Loyalty tier", "Request mode"), never paths or JSON.
+- Non-policy rules still map to a caller shape directly ( on the rule
+  doc) and drive their pickers and test-console samples from it.
 
 **Shape 1 — Shopping Engine** (`shopping`):
 
