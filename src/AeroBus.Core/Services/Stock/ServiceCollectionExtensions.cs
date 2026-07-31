@@ -1,3 +1,5 @@
+using AeroBus.Core.Data.Postgres;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AeroBus.Core.Services.Stock
@@ -10,9 +12,12 @@ namespace AeroBus.Core.Services.Stock
         /// (FlightId,Bucket)→_id cache inside is process-wide (static), so scope
         /// does not defeat it.
         /// </summary>
-        public static IServiceCollection AddStock(this IServiceCollection services)
+        public static IServiceCollection AddStock(this IServiceCollection services, IConfiguration config)
         {
-            services.AddScoped<IInventoryService, InventoryService>();
+            if (config.PostgresEnabled())
+                services.AddScoped<IInventoryService, PgInventoryService>();
+            else
+                services.AddScoped<IInventoryService, InventoryService>();
             return services;
         }
     }

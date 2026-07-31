@@ -1,6 +1,8 @@
 using AeroBus.Core.Repositories.Shopping;
 using AeroBus.Core.Repositories.Stock;
 using AeroBus.Core.Services.Catalogue;
+using AeroBus.Core.Data.Postgres;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AeroBus.Core.Repositories.Catalogue
@@ -14,7 +16,7 @@ namespace AeroBus.Core.Repositories.Catalogue
         /// Stock (flight inventory, product counters) and Shopping registrations
         /// are folded in here — in ooms they had no module of their own either.
         /// </summary>
-        public static IServiceCollection AddCatalogue(this IServiceCollection services)
+        public static IServiceCollection AddCatalogue(this IServiceCollection services, IConfiguration config)
         {
             services.AddScoped<IAirports, Airports>();
             services.AddScoped<AirportService>();
@@ -76,7 +78,10 @@ namespace AeroBus.Core.Repositories.Catalogue
 
             // Stock: per-flight inventory documents created by the flight builder,
             // and SKU/bucket product counters.
-            services.AddScoped<IFlightInventories, FlightInventories>();
+            if (config.PostgresEnabled())
+                services.AddScoped<IFlightInventories, Stock.PgFlightInventories>();
+            else
+                services.AddScoped<IFlightInventories, FlightInventories>();
             services.AddScoped<IProductCounters, ProductCounters>();
 
             // Shopping projection over the flight-solutions engine (registered in

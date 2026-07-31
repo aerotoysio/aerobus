@@ -55,7 +55,7 @@ builder.Services.AddCache();
 
 // Catalogue: reference data, fleet, schedules/flights + flight builder (with
 // per-flight inventory initialisation), products/bundles/stock, shopping engines.
-builder.Services.AddCatalogue();
+builder.Services.AddCatalogue(builder.Configuration);
 
 // PostgreSQL system of record (docs/storage-architecture.md): orders domain,
 // customers, network/schedule, merchandising headliners. Schema-per-org.
@@ -74,11 +74,11 @@ builder.Services.AddOffer();
 
 // Stock: seat-inventory sell/release over the DocumentForge conditional-update
 // primitive (the order lifecycle decrements/releases through this).
-builder.Services.AddStock();
+builder.Services.AddStock(builder.Configuration);
 
 // Order distribution: order aggregate repo + create/retrieve/change services
 // (inventory decrement on create, release on cancel, RuleForge order decisions).
-builder.Services.AddOrders();
+builder.Services.AddOrders(builder.Configuration);
 
 // Operations (DCS): departure-control surface — flight status lifecycle, the
 // flight-keyed passenger manifest (indexed from orders at booking) and check-in /
