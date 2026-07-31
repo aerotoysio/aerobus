@@ -1,6 +1,7 @@
 using AeroBus.Api.Bootstrap;
 using AeroBus.Core.Common.Cache;
 using AeroBus.Core.Data;
+using AeroBus.Core.Data.Postgres;
 using AeroBus.Core.Events;
 using AeroBus.Core.Identity;
 using AeroBus.Core.Repositories.Admin;
