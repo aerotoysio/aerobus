@@ -41,18 +41,22 @@ namespace AeroBus.Core.Services.Admin
         private readonly IDocumentForgeClient _control;
         private readonly ILogger<ProvisioningService> _log;
 
+        private readonly Data.Postgres.IPgDatabase? _pg;
+
         public ProvisioningService(
             IdentityService identity,
             IOrganisations organisations,
             IDocumentStoreFactory storeFactory,
             [FromKeyedServices(AeroBus.Core.Data.ServiceCollectionExtensions.ControlClientKey)] IDocumentForgeClient control,
-            ILogger<ProvisioningService> log)
+            ILogger<ProvisioningService> log,
+            Data.Postgres.IPgDatabase? pg = null)
         {
             _identity = identity;
             _organisations = organisations;
             _storeFactory = storeFactory;
             _control = control;
             _log = log;
+            _pg = pg;
         }
 
         public async Task<OnboardResult> ProvisionAsync(OnboardRequest req, CancellationToken ct = default)
@@ -75,9 +79,12 @@ namespace AeroBus.Core.Services.Admin
             if (designator.Length > 3) designator = designator[..3];
             var currency = string.IsNullOrWhiteSpace(req.OperatingCurrency) ? "USD" : req.OperatingCurrency!.ToUpperInvariant();
 
-            // 2. Create the org's own DocumentForge database.
+            // 2. Create the org's own DocumentForge database — and its Postgres
+            // schema (system of record) when Postgres is configured.
             if (!await _control.EnsureDatabaseAsync(shortName, ct))
                 throw new IdentityException(500, $"Could not create the DocumentForge database '{shortName}'.");
+            if (_pg is not null)
+                await _pg.EnsureSchemaAsync(shortName, ct);
 
             // 3. Seed the new database (explicit-db store — the org isn't routable yet).
             var store = _storeFactory.ForDatabase(shortName);
