@@ -1,5 +1,7 @@
 using AeroBus.Core.Repositories.Distribution;
 using AeroBus.Core.Repositories.Order;
+using AeroBus.Core.Data.Postgres;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AeroBus.Core.Services.Distribution
@@ -34,9 +36,12 @@ namespace AeroBus.Core.Services.Distribution
         /// Depends on Admin (companies), the offers repo (<c>AddOffer</c>), stock
         /// (<c>AddStock</c> — the inventory service) and RuleForge being registered.
         /// </summary>
-        public static IServiceCollection AddOrders(this IServiceCollection services)
+        public static IServiceCollection AddOrders(this IServiceCollection services, IConfiguration config)
         {
-            services.AddScoped<IOrders, Orders>();
+            if (config.PostgresEnabled())
+                services.AddScoped<IOrders, Repositories.Order.PgOrders>();
+            else
+                services.AddScoped<IOrders, Orders>();
             services.AddScoped<OrderCreateService>();
             services.AddScoped<OrderRetrieveService>();
             services.AddScoped<OrderChangeService>();

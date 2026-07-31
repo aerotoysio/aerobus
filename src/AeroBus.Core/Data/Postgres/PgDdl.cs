@@ -47,13 +47,26 @@ namespace AeroBus.Core.Data.Postgres
             CREATE INDEX IF NOT EXISTS ix_orders_status ON orders (status);
 
             CREATE TABLE IF NOT EXISTS flight_inventory (
+                id            uuid,
+                company_id    uuid,
                 flight_id     uuid NOT NULL,
                 bucket        text NOT NULL,
+                capacity      integer NOT NULL DEFAULT 0,
                 available     integer NOT NULL,
                 sold          integer NOT NULL DEFAULT 0,
+                status        text,
+                created       timestamptz,
                 updated       timestamptz,
                 PRIMARY KEY (flight_id, bucket)
             );
+            CREATE INDEX IF NOT EXISTS ix_flight_inventory_id ON flight_inventory (id);
+
+            -- Additive evolution for schemas created before a column existed.
+            ALTER TABLE flight_inventory ADD COLUMN IF NOT EXISTS id uuid;
+            ALTER TABLE flight_inventory ADD COLUMN IF NOT EXISTS company_id uuid;
+            ALTER TABLE flight_inventory ADD COLUMN IF NOT EXISTS capacity integer NOT NULL DEFAULT 0;
+            ALTER TABLE flight_inventory ADD COLUMN IF NOT EXISTS status text;
+            ALTER TABLE flight_inventory ADD COLUMN IF NOT EXISTS created timestamptz;
 
             CREATE TABLE IF NOT EXISTS order_counters (
                 key           text PRIMARY KEY,
