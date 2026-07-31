@@ -56,8 +56,13 @@ builder.Services.AddCache();
 // per-flight inventory initialisation), products/bundles/stock, shopping engines.
 builder.Services.AddCatalogue();
 
+// PostgreSQL system of record (docs/storage-architecture.md): orders domain,
+// customers, network/schedule, merchandising headliners. Schema-per-org.
+// Unconfigured = the DocumentForge fallbacks serve those domains.
+builder.Services.AddPostgres(builder.Configuration);
+
 // Customer: the customer aggregate (passports/stored cards embedded).
-builder.Services.AddCustomer();
+builder.Services.AddCustomer(builder.Configuration);
 
 // RuleForge: typed client + DecisionRunner for the named decision points.
 // Bound from the "RuleForge" config section (BaseUrl/ApiKey/TimeoutMs/Endpoints).

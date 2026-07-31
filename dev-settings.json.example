@@ -15,5 +15,8 @@
   },
   "RuleForge": {
     "BaseUrl": "http://localhost:5050"
+  },
+  "Postgres": {
+    "ConnectionString": "Host=localhost;Database=aerotoys;Username=postgres;Password=<dev password>"
   }
 }
